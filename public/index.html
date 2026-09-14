@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pinturas da Sophi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#inicio" data-screen="home">
+        <span class="brand-mark">PS</span>
+        <span>Pinturas <i>da Sophi</i></span>
+      </a>
+
+      <nav class="main-nav" aria-label="Navegação principal">
+        <button data-screen="home">Início</button>
+        <button data-screen="store">Quadros originais</button>
+        <button data-screen="chat">Chat de encomendas</button>
+        <button data-screen="cart">Carrinho <span id="cartBadge">0</span></button>
+        <button data-screen="help">Ajuda</button>
+      </nav>
+
+      <div class="header-actions">
+        <a class="social" href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
+        <a class="social" href="https://shopee.com.br" target="_blank" rel="noreferrer">Shopee</a>
+        <button id="logoutButton" class="button ghost hidden">Sair</button>
+        <button id="profileButton" class="avatar hidden" data-screen="profile">S</button>
+        <button id="loginButton" class="button dark">Entrar</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="screen-home" class="screen active">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Bem-vinda ao ateliê</p>
+            <h1>Arte para viver <em>de perto.</em></h1>
+            <p class="hero-text">Conheça os quadros originais da Sophi ou converse diretamente com ela para criar uma encomenda só sua.</p>
+            <div class="hero-actions">
+              <button class="button dark" data-screen="store">Ver quadros originais <span>↗</span></button>
+              <button class="text-link" data-screen="chat">Fazer uma encomenda</button>
+            </div>
+          </div>
+          <div class="hero-art">
+            <div class="sun"></div>
+            <div class="arch arch-one"></div>
+            <div class="arch arch-two"></div>
+            <div class="brush-line"></div>
+            <p>feito à mão<br /><strong>com intenção</strong></p>
+          </div>
+        </div>
+
+        <div class="home-links section">
+          <div class="section-heading">
+            <div><p class="eyebrow">Por onde começar</p><h2>Escolha seu<br /><em>caminho.</em></h2></div>
+            <p class="section-note">Uma casa para descobrir obras prontas, encomendar e acompanhar cada detalhe.</p>
+          </div>
+          <div class="quick-grid">
+            <button class="quick-card quick-blue" data-screen="store"><span class="quick-icon">◒</span><strong>Quadros originais</strong><small>Peças prontas, únicas e disponíveis para compra.</small><span class="quick-arrow">↗</span></button>
+            <button class="quick-card quick-pink" data-screen="chat"><span class="quick-icon">✉</span><strong>Encomende com a Sophi</strong><small>Conte sua ideia e converse direto com a artista.</small><span class="quick-arrow">↗</span></button>
+            <button class="quick-card quick-yellow" data-screen="cart"><span class="quick-icon">□</span><strong>Seu carrinho</strong><small>Revise suas peças, pedidos e rastreios.</small><span class="quick-arrow">↗</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-store" class="screen section catalog-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">Loja do ateliê</p><h2>Quadros <em>originais.</em></h2></div>
+          <p class="section-note">Obras prontas, pintadas pela Sophi e disponíveis para compra. Cada peça existe uma única vez.</p>
+        </div>
+        <div id="catalogGrid" class="catalog-grid"></div>
+      </section>
+
+      <section id="screen-chat" class="screen section workspace-section">
+        <div class="screen-intro"><p class="eyebrow">Encomendas personalizadas</p><h2>Vamos criar algo<br /><em>seu?</em></h2><p>Conte para a Sophi o que você imaginou. Vocês combinam referências, tamanho, materiais e prazo diretamente por aqui.</p></div>
+        <div class="panel chat-panel chat-full"><div class="panel-title"><div><h3>Conversa com a Sophi</h3><span class="online"><i></i> online agora</span></div><span class="chat-profile">S</span></div><div id="messages" class="messages"><div class="message received"><strong>Sophi <small>agora</small></strong><p>Oi! Me conte qual pintura você está imaginando.</p></div></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Escreva sua ideia de encomenda..." autocomplete="off" /><button class="send-button" title="Enviar mensagem">↗</button></form></div>
+      </section>
+
+      <section id="screen-cart" class="screen section workspace-section">
+        <div class="section-heading"><div><p class="eyebrow">Seu espaço</p><h2>Carrinho e<br /><em>rastreio.</em></h2></div><p class="section-note">Confira suas peças originais, finalize o pedido e acompanhe o caminho até sua casa.</p></div>
+        <div class="cart-layout"><div class="panel cart-panel"><div class="panel-title"><h3>Itens selecionados</h3><span id="cartCount" class="panel-count">0 itens</span></div><div id="cartList" class="empty-state">Seu carrinho está vazio.<br />Encontre uma peça original na loja.</div><div id="cartFooter" class="cart-footer hidden"><strong>Total de itens: <span id="cartTotal">0</span></strong><button id="checkoutButton" class="button dark">Finalizar pedido <span>↗</span></button></div></div><div class="panel tracking-panel"><div class="panel-title"><h3>Rastrear pedido</h3><span class="tracking-mark">⌁</span></div><p>Digite o código recebido após a compra para ver o status e a previsão de entrega.</p><form id="trackingForm" class="tracking-form"><input id="trackingCode" placeholder="Ex.: PS-ABC123" required /><button class="button dark">Consultar</button></form><div id="trackingResult"></div></div></div>
+        <div class="panel orders-panel orders-full"><div class="panel-title"><h3>Histórico de pedidos</h3><span class="panel-count">seus pedidos</span></div><div id="ordersList" class="empty-state">Entre para visualizar seus pedidos.</div></div>
+      </section>
+
+      <section id="screen-profile" class="screen section profile-section">
+        <div class="section-heading"><div><p class="eyebrow">Área pessoal</p><h2>Seu perfil e<br /><em>configurações.</em></h2></div><p class="section-note">Mantenha seus dados atualizados para facilitar encomendas e entregas.</p></div>
+        <div class="profile-layout"><div class="panel"><form id="profileForm"><div class="profile-heading"><span id="profileInitial" class="profile-large">S</span><div><h3>Dados de identificação</h3><p>Essas informações aparecem no seu atendimento.</p></div></div><label>Foto de perfil<input id="profilePhoto" type="file" accept="image/*" /></label><label>Nome<input id="profileName" required /></label><label>Telefone<input id="profilePhone" /></label><label>Rua<input id="profileStreet" /></label><label>Bairro<input id="profileNeighborhood" /></label><button class="button dark full" type="submit">Salvar alterações</button><p id="profileFeedback" class="feedback"></p></form></div><div class="panel settings-panel"><h3>Configurações</h3><label class="setting-row"><span><strong>Atualizações de pedidos</strong><small>Receber novidades sobre o andamento.</small></span><input type="checkbox" checked /></label><label class="setting-row"><span><strong>Novidades do ateliê</strong><small>Saber quando novos quadros chegarem.</small></span><input type="checkbox" /></label><button class="button ghost" data-screen="help">Abrir ajuda</button></div></div>
+      </section>
+
+      <section id="screen-help" class="screen help-screen section">
+        <div class="section-heading"><div><p class="eyebrow">Estamos aqui para ajudar</p><h2>Encomendar pode ser<br /><em>simples assim.</em></h2></div><p class="section-note">Veja respostas rápidas sobre compras, encomendas, pagamentos e entregas.</p></div>
+        <div class="help-items"><details open><summary>Qual é a diferença entre original e encomenda?</summary><p>Os quadros originais já estão prontos e são peças únicas disponíveis na loja. Na encomenda, você conversa com a Sophi para criar uma obra personalizada.</p></details><details><summary>Como faço uma encomenda?</summary><p>Abra o Chat de encomendas, conte sua ideia e combine tamanho, materiais, prazo e valor diretamente com a artista.</p></details><details><summary>Como acompanho minha entrega?</summary><p>Depois da compra, o código aparece no Carrinho. Use a área Rastrear pedido para consultar o status e a previsão atualizada.</p></details><details><summary>Como funcionam as entregas?</summary><p>Quando a obra for enviada, o status do pedido muda e a previsão de entrega fica disponível para consulta.</p></details></div>
+      </section>
+    </main>
+
+    <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
+
+    <dialog id="authDialog"><button class="dialog-close" aria-label="Fechar">×</button><div id="authContent"><p class="eyebrow">Bem-vinda(o)</p><h2 id="authTitle">Entrar na sua conta</h2><form id="authForm"><label id="nameField" class="hidden">Nome<input id="name" type="text" /></label><label>E-mail<input id="email" type="email" required /></label><label>Senha<div class="password-field"><input id="password" type="password" minlength="6" required /><button type="button" id="togglePassword" title="Mostrar senha">◉</button></div></label><button class="button dark full" type="submit">Entrar <span>↗</span></button></form><button id="recoverLink" class="dialog-link">Esqueci minha senha</button><p id="authSwitch" class="switch-text">Ainda não tem conta? <button>Cadastre-se</button></p><p id="authFeedback" class="feedback"></p></div></dialog>
+    <script src="/app.js"></script>
+  </body>
+</html>
