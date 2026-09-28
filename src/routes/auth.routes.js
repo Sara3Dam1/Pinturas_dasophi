@@ -3,7 +3,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const { jwtSecret } = require("../config");
-const { publicClient } = require("../utils/client");
+const { publicClient } = require("../utilidade/client");
 
 const router = express.Router();
 

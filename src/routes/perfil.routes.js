@@ -2,7 +2,7 @@ const express = require("express");
 const db = require("../db");
 const upload = require("../middleware/upload");
 const { requireAuth } = require("../middleware/auth");
-const { publicClient } = require("../utils/client");
+const { publicClient } = require("../utilidade/client");
 
 const router = express.Router();
 const profileFields = [

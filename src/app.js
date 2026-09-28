@@ -4,9 +4,9 @@ const cors = require("cors");
 const { publicDir, uploadsDir } = require("./config");
 const healthRoutes = require("./routes/health.routes");
 const authRoutes = require("./routes/auth.routes");
-const profileRoutes = require("./routes/profile.routes");
-const catalogRoutes = require("./routes/catalog.routes");
-const orderRoutes = require("./routes/order.routes");
+const profileRoutes = require("./routes/perfil.routes");
+const catalogRoutes = require("./routes/catalogo.routes");
+const orderRoutes = require("./routes/pedido.routes");
 const chatRoutes = require("./routes/chat.routes");
 
 const app = express();
