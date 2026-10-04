@@ -30,4 +30,14 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
+app.use((error, _req, res, next) => {
+  if (error.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ erro: "A imagem deve ter no maximo 5 MB." });
+  }
+  if (error.code === "INVALID_FILE_TYPE") {
+    return res.status(400).json({ erro: error.message });
+  }
+  return next(error);
+});
+
 module.exports = app;
