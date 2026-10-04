@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { requireAdmin } = require("../middleware/admin");
 
 const router = express.Router();
 const orderQuery = `
@@ -8,39 +9,18 @@ const orderQuery = `
     p.*,
     q.titulo,
     q.tamanho,
-    s.descricao_status
+    q.preco_u,
+    s.descricao_status,
+    p.data_envio
   FROM Pedido p
   JOIN Quadro q ON q.id_quadro = p.id_qua
-  JOIN Status_Pedido s ON s.id_status = p.id_status
+  JOIN Status s ON s.id_status = p.id_status
 `;
 
 router.post("/", requireAuth, (req, res) => {
-  const quadro = db
-    .prepare("SELECT id_quadro FROM Quadro WHERE id_quadro = ?")
-    .get(req.body.id_qua);
-
-  if (!quadro) {
-    return res.status(404).json({ erro: "Quadro nao encontrado." });
-  }
-
-  const codigo = `PS-${Date.now().toString(36).toUpperCase()}`;
-  const previsao = new Date(Date.now() + 14 * 86400000)
-    .toISOString()
-    .slice(0, 10);
-  const result = db
-    .prepare(
-      `
-    INSERT INTO Pedido
-      (id_qua, id_status, id_cli, codigo_rastreamento, previsao_entrega)
-    VALUES (?, 1, ?, ?, ?)
-  `,
-    )
-    .run(req.body.id_qua, req.user.id, codigo, previsao);
-
-  const order = db
-    .prepare(`${orderQuery} WHERE p.id_ped = ?`)
-    .get(result.lastInsertRowid);
-  return res.status(201).json(order);
+  return res.status(410).json({
+    erro: "Use /api/pagamentos/checkout para criar pedidos com pagamento.",
+  });
 });
 
 router.get("/", requireAuth, (req, res) => {
@@ -79,16 +59,56 @@ router.post("/:id/feedback", requireAuth, (req, res) => {
 
   db.prepare(
     `
-    INSERT INTO Feedback_Pedido (id_cli, id_ped, avaliacao, comentario)
+    INSERT INTO Feedback (id_cli, id_ped, avaliacao, comentario)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(id_cli, id_ped) DO UPDATE SET
       avaliacao = excluded.avaliacao,
       comentario = excluded.comentario,
-      data_avaliacao = CURRENT_TIMESTAMP
+      data_pedido = CURRENT_TIMESTAMP
   `,
   ).run(req.user.id, req.params.id, avaliacao, comentario || null);
 
   return res.status(201).json({ mensagem: "Feedback registrado." });
+});
+
+router.patch("/:id/envio", requireAdmin, (req, res) => {
+  const trackingCode = String(req.body.codigo_rastreamento || "").trim();
+  if (!trackingCode) {
+    return res.status(400).json({ erro: "Informe o codigo de rastreio dos Correios." });
+  }
+
+  const order = db
+    .prepare(`${orderQuery} WHERE p.id_ped = ?`)
+    .get(req.params.id);
+  if (!order) {
+    return res.status(404).json({ erro: "Pedido nao encontrado." });
+  }
+  if (!["Pagamento aprovado", "Em producao"].includes(order.descricao_status)) {
+    return res.status(409).json({ erro: "O pedido precisa estar pago antes do envio." });
+  }
+  const duplicateCode = db
+    .prepare("SELECT id_ped FROM Pedido WHERE codigo_rastreamento = ? AND id_ped <> ?")
+    .get(trackingCode, req.params.id);
+  if (duplicateCode) {
+    return res.status(409).json({ erro: "Este codigo de rastreio ja esta vinculado a outro pedido." });
+  }
+
+  const sentStatus = db
+    .prepare("SELECT id_status FROM Status WHERE descricao_status = ?")
+    .get("Enviado");
+  const estimatedDelivery = new Date(Date.now() + 7 * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  db.prepare(`
+    UPDATE Pedido
+    SET id_status = ?, codigo_rastreamento = ?, data_envio = CURRENT_TIMESTAMP,
+        previsao_entrega = ?
+    WHERE id_ped = ?
+  `).run(sentStatus.id_status, trackingCode, estimatedDelivery, req.params.id);
+
+  return res.json(
+    db.prepare(`${orderQuery} WHERE p.id_ped = ?`).get(req.params.id),
+  );
 });
 
 module.exports = router;
