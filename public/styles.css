@@ -837,6 +837,54 @@ input:focus {
 .chat-history .empty-state {
   padding: 75px 10px;
 }
+.gallery-title {
+  border-top: 1px solid var(--line);
+  font-size: 18px;
+  margin: 18px 0 12px;
+  padding-top: 18px;
+}
+.feedback-gallery {
+  display: grid;
+  gap: 14px;
+  max-height: 440px;
+  overflow-y: auto;
+}
+.review-item {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 84px minmax(0, 1fr);
+  padding-bottom: 14px;
+}
+.review-item img {
+  aspect-ratio: 1;
+  background: var(--cream);
+  object-fit: cover;
+  width: 84px;
+}
+.review-item strong,
+.review-item small {
+  display: block;
+}
+.review-item strong {
+  font-size: 15px;
+}
+.review-item p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.review-item small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.review-rating {
+  color: #bb7b22;
+  display: block;
+  font-size: 14px;
+  margin-top: 3px;
+}
 
 .cart-layout,
 .profile-layout {
@@ -948,6 +996,35 @@ input:focus {
 }
 .cart-panel .feedback {
   margin-bottom: 0;
+}
+.workflow-dialog {
+  max-width: 520px;
+}
+.workflow-dialog h2 {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+.dialog-description {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+.workflow-dialog select,
+.workflow-dialog textarea {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  margin-top: 7px;
+  padding: 10px;
+  width: 100%;
+}
+.workflow-dialog textarea {
+  resize: vertical;
+}
+.workflow-dialog input[type="file"] {
+  padding: 8px 0;
 }
 
 .tracking-mark {

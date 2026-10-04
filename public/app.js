@@ -35,6 +35,19 @@ function restoreCart() {
   state.cart = loadUserCart(state.client.Id_Cli);
 }
 
+function clearLocalSession() {
+  state.token = null;
+  state.client = null;
+  state.cart = [];
+  localStorage.removeItem("pinturas_token");
+  localStorage.removeItem("pinturas_client");
+  localStorage.removeItem("pinturas_cart");
+  sessionStorage.removeItem("pinturas_checkout_cart");
+  clearChatMessages();
+  updateHeader();
+  renderCart();
+}
+
 const api = async (url, options = {}) => {
   const response = await fetch(`/api${url}`, {
     ...options,
@@ -45,6 +58,7 @@ const api = async (url, options = {}) => {
     },
   });
   const data = await response.json();
+  if (response.status === 401 && state.token) clearLocalSession();
   if (!response.ok) throw new Error(data.erro || "Ocorreu um erro.");
   return data;
 };
@@ -67,6 +81,7 @@ function navigate(screen) {
     loadChat();
     loadOrders();
   }
+  if (screen === "chat") loadPublicFeedbacks();
   if (screen === "profile") loadProfile();
 }
 
@@ -91,6 +106,10 @@ function showFeedback(id, message) {
   $(id).textContent = message;
 }
 
+function clearChatMessages() {
+  $("messages").innerHTML = '<div class="message received"><strong>Sophi <small>agora</small></strong><p>Oi! Me conte qual pintura você está imaginando.</p></div>';
+}
+
 function openAuth(register = false) {
   state.register = register;
   $("authTitle").textContent = register
@@ -110,6 +129,7 @@ function openAuth(register = false) {
 }
 
 function saveSession(data) {
+  clearChatMessages();
   state.token = data.token;
   state.client = data.cliente;
   state.cart = loadUserCart(state.client.Id_Cli);
@@ -218,19 +238,25 @@ function renderCart() {
   });
 }
 
-async function checkoutCart() {
-  if (!state.token) {
-    openAuth();
-    return;
-  }
+function checkoutCart() {
+  if (!state.token) return openAuth();
   if (!state.cart.length) return;
+  $("checkoutStreet").value = state.client?.rua || "";
+  $("checkoutHouseNumber").value = state.client?.numero_casa || "";
+  $("checkoutNeighborhood").value = state.client?.bairro || "";
+  $("checkoutCep").value = state.client?.cep || "";
+  $("addressFeedback").textContent = "";
+  $("addressDialog").showModal();
+}
 
+async function startCheckout(address) {
   try {
     const checkout = await api("/pagamentos/checkout", {
       method: "POST",
       body: JSON.stringify({
         itens: state.cart.map((item) => item.id_quadro),
         forma_pagamento: $("paymentMethod").value,
+        endereco: address,
       }),
     });
     sessionStorage.setItem("pinturas_checkout_cart", JSON.stringify({
@@ -243,16 +269,53 @@ async function checkoutCart() {
   }
 }
 
+$("addressForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const address = {
+    rua: $("checkoutStreet").value.trim(),
+    numero_casa: $("checkoutHouseNumber").value.trim(),
+    bairro: $("checkoutNeighborhood").value.trim(),
+    cep: $("checkoutCep").value.trim(),
+  };
+
+  try {
+    const profile = await api("/perfil", {
+      method: "PATCH",
+      body: JSON.stringify(address),
+    });
+    state.client = profile;
+    localStorage.setItem("pinturas_client", JSON.stringify(profile));
+    updateHeader();
+    $("addressDialog").close();
+    await startCheckout(address);
+  } catch (error) {
+    showFeedback("addressFeedback", error.message);
+  }
+});
+
 function renderOrders(target, orders, emptyText) {
   target.innerHTML = orders.length
-    ? orders.map((order) => `
-        <div class="order-row">
-          <div><strong>${escapeHTML(order.titulo)}</strong><small>${order.codigo_rastreamento ? `Correios: ${escapeHTML(order.codigo_rastreamento)}` : "Rastreio após a postagem"} · ${order.previsao_entrega ? `previsão ${formatDate(order.previsao_entrega)}` : "prazo em análise"}</small></div>
-          <span class="order-status">${escapeHTML(order.descricao_status)}<br /><button class="dialog-link feedback-action" data-feedback="${Number(order.id_ped)}">Avaliar</button></span>
-        </div>`).join("")
+    ? orders.map((order) => {
+        const delivered = order.descricao_status === "Entregue" && order.data_entrega_confirmada;
+        const action = order.descricao_status === "Enviado"
+          ? `<button class="dialog-link" data-confirm-delivery="${Number(order.id_ped)}">Confirmar recebimento</button>`
+          : delivered && !order.avaliacao_feedback
+            ? `<button class="dialog-link" data-feedback="${Number(order.id_ped)}">Avaliar com foto</button>`
+            : order.avaliacao_feedback
+              ? "Avaliação publicada"
+              : "";
+        return `
+          <div class="order-row">
+            <div><strong>${escapeHTML(order.titulo)}</strong><small>${order.codigo_rastreamento ? `Correios: ${escapeHTML(order.codigo_rastreamento)}` : "Rastreio após a postagem"} · ${order.previsao_entrega ? `previsão ${formatDate(order.previsao_entrega)}` : "prazo em análise"}</small></div>
+            <span class="order-status">${escapeHTML(order.descricao_status)}${action ? `<br />${action}` : ""}</span>
+          </div>`;
+      }).join("")
     : `<div class="empty-state">${emptyText}</div>`;
   target.querySelectorAll("[data-feedback]").forEach((button) => {
     button.addEventListener("click", () => sendFeedback(button.dataset.feedback));
+  });
+  target.querySelectorAll("[data-confirm-delivery]").forEach((button) => {
+    button.addEventListener("click", () => confirmDelivery(button.dataset.confirmDelivery));
   });
 }
 
@@ -272,32 +335,78 @@ async function loadOrders() {
   }
 }
 
-async function sendFeedback(id) {
-  const rating = Number(prompt("De 1 a 5, qual sua avaliação?"));
-  if (!rating) return;
-  const comment = prompt("Conte um pouco sobre sua experiência:") || "";
+async function loadPublicFeedbacks() {
   try {
-    await api(`/pedidos/${id}/feedback`, {
-      method: "POST",
-      body: JSON.stringify({ avaliacao: rating, comentario: comment }),
-    });
-    alert("Obrigada pela avaliação.");
+    const feedbacks = await api("/pedidos/feedbacks");
+    $("feedbackGallery").innerHTML = feedbacks.length
+      ? feedbacks.map((feedback) => `
+          <article class="review-item">
+            <img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />
+            <div><strong>${escapeHTML(feedback.titulo)}</strong><span class="review-rating" aria-label="${Number(feedback.avaliacao)} de 5 estrelas">${"★".repeat(Number(feedback.avaliacao))}</span><p>${escapeHTML(feedback.comentario)}</p><small>${formatDate(feedback.data_pedido)}</small></div>
+          </article>`).join("")
+      : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
+  } catch {
+    $("feedbackGallery").innerHTML = '<p class="empty-state">Não foi possível carregar as avaliações.</p>';
+  }
+}
+
+async function confirmDelivery(id) {
+  try {
+    await api(`/pedidos/${id}/confirmar-entrega`, { method: "PATCH" });
+    await loadOrders();
+    await loadPublicFeedbacks();
   } catch (error) {
     alert(error.message);
   }
 }
 
+function sendFeedback(id) {
+  $("feedbackOrderId").value = id;
+  $("feedbackForm").reset();
+  $("feedbackOrderId").value = id;
+  $("feedbackFormStatus").textContent = "";
+  $("feedbackDialog").showModal();
+}
+
+$("feedbackForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData();
+  form.append("avaliacao", $("feedbackRating").value);
+  form.append("comentario", $("feedbackComment").value.trim());
+  form.append("foto", $("feedbackPhoto").files[0]);
+
+  try {
+    const response = await fetch(`/api/pedidos/${encodeURIComponent($("feedbackOrderId").value)}/feedback`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${state.token}` },
+      body: form,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.erro || "Não foi possível publicar a avaliação.");
+    $("feedbackDialog").close();
+    await loadOrders();
+    await loadPublicFeedbacks();
+  } catch (error) {
+    showFeedback("feedbackFormStatus", error.message);
+  }
+});
+
 async function loadChat() {
   if (!state.token) return;
-  const messages = await api("/chat");
-  $("messages").innerHTML = messages
-    .map((message) => `
-      <div class="message ${message.remetente === "cliente" ? "sent" : "received"}">
-        <strong>${escapeHTML(message.remetente === "cliente" ? state.client.nome : "Sophi")} <small>${formatDate(message.data_envio)}</small></strong>
-        <p>${escapeHTML(message.texto)}</p>
-      </div>`)
-    .join("");
-  $("messages").scrollTop = $("messages").scrollHeight;
+  clearChatMessages();
+  try {
+    const messages = await api("/chat");
+    $("messages").innerHTML = messages
+      .map((message) => `
+        <div class="message ${message.remetente === "cliente" ? "sent" : "received"}">
+          <strong>${escapeHTML(message.remetente === "cliente" ? state.client.nome : "Sophi")} <small>${formatDate(message.data_envio)}</small></strong>
+          <p>${escapeHTML(message.texto)}</p>
+        </div>`)
+      .join("");
+    $("messages").scrollTop = $("messages").scrollHeight;
+  } catch {
+    clearChatMessages();
+  }
 }
 
 async function loadProfile() {
@@ -311,6 +420,7 @@ async function loadProfile() {
   updateHeader();
   $("profileName").value = profile.nome || "";
   $("profilePhone").value = profile.telefone || "";
+  $("profileCep").value = profile.cep || "";
   $("profileCpf").value = profile.CPF || "";
   $("profileHouseNumber").value = profile.numero_casa || "";
   $("profileStreet").value = profile.rua || "";
@@ -326,20 +436,13 @@ document.querySelectorAll("[data-screen]").forEach((element) => {
 
 $("loginButton").addEventListener("click", () => openAuth());
 $("logoutButton").addEventListener("click", () => {
-  state.token = null;
-  state.client = null;
-  state.cart = [];
-  localStorage.removeItem("pinturas_token");
-  localStorage.removeItem("pinturas_client");
-  localStorage.removeItem("pinturas_cart");
-  sessionStorage.removeItem("pinturas_checkout_cart");
+  clearChatMessages();
+  clearLocalSession();
   $("profileForm").reset();
   $("email").value = "";
   $("password").value = "";
   $("name").value = "";
   $("authFeedback").textContent = "";
-  updateHeader();
-  renderCart();
   navigate("home");
 });
 
@@ -391,6 +494,7 @@ $("profileForm").addEventListener("submit", async (event) => {
         numero_casa: $("profileHouseNumber").value,
         rua: $("profileStreet").value,
         bairro: $("profileNeighborhood").value,
+        cep: $("profileCep").value,
       }),
     });
     state.client = client;
