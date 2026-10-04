@@ -19,6 +19,7 @@ db.exec(`
     numero_casa TEXT,
     rua TEXT,
     bairro TEXT,
+    cep TEXT,
     foto TEXT
   );
 
@@ -63,7 +64,12 @@ db.exec(`
     id_cli INTEGER NOT NULL REFERENCES Clientes(Id_Cli),
     codigo_rastreamento TEXT UNIQUE,
     data_pedido TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    previsao_entrega TEXT
+    previsao_entrega TEXT,
+    rua_entrega TEXT,
+    numero_casa_entrega TEXT,
+    bairro_entrega TEXT,
+    cep_entrega TEXT,
+    data_entrega_confirmada TEXT
   );
 
   CREATE TABLE IF NOT EXISTS Feedback_Pedido (
@@ -91,6 +97,7 @@ db.exec(`
     id_ped INTEGER NOT NULL REFERENCES Pedido(id_ped),
     avaliacao INTEGER NOT NULL CHECK (avaliacao BETWEEN 1 AND 5),
     comentario TEXT,
+    foto TEXT,
     data_pedido TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id_cli, id_ped)
   );
@@ -172,13 +179,30 @@ if (!quadroColumns.some((column) => column.name === "preco_u")) {
 }
 
 const pedidoColumns = db.prepare("PRAGMA table_info(Pedido)").all();
-if (!pedidoColumns.some((column) => column.name === "data_envio")) {
-  db.exec("ALTER TABLE Pedido ADD COLUMN data_envio TEXT");
+for (const [column, type] of [
+  ["data_envio", "TEXT"],
+  ["rua_entrega", "TEXT"],
+  ["numero_casa_entrega", "TEXT"],
+  ["bairro_entrega", "TEXT"],
+  ["cep_entrega", "TEXT"],
+  ["data_entrega_confirmada", "TEXT"],
+]) {
+  if (!pedidoColumns.some((existing) => existing.name === column)) {
+    db.exec(`ALTER TABLE Pedido ADD COLUMN ${column} ${type}`);
+  }
+}
+
+const clienteColumns = db.prepare("PRAGMA table_info(Clientes)").all();
+if (!clienteColumns.some((column) => column.name === "cep")) {
+  db.exec("ALTER TABLE Clientes ADD COLUMN cep TEXT");
 }
 
 const feedbackColumns = db.prepare("PRAGMA table_info(Feedback)").all();
 if (!feedbackColumns.some((column) => column.name === "comentario")) {
   db.exec("ALTER TABLE Feedback ADD COLUMN comentario TEXT");
+}
+if (!feedbackColumns.some((column) => column.name === "foto")) {
+  db.exec("ALTER TABLE Feedback ADD COLUMN foto TEXT");
 }
 
 db.exec(`
