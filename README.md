@@ -25,6 +25,10 @@ npm start
 
 Cadastre `/api/pagamentos/webhook` como URL de notificações de pagamentos no painel do Mercado Pago. Sem essas variáveis, o checkout e as operações administrativas ficam desabilitados; não há cobrança simulada.
 
+O checkout pede a confirmação de rua, número, bairro e CEP antes de abrir o Mercado Pago e salva uma cópia do endereço em cada pedido. Depois de marcar o pedido como enviado, o cliente confirma o recebimento; só então pode publicar nota, opinião e foto na galeria pública. As fotos aceitas são JPEG, PNG, WebP, GIF ou AVIF, até 5 MB.
+
+Se `JWT_SECRET` não estiver definido, o servidor gera um segredo aleatório e o mantém em `data/jwt-secret` (diretório ignorado pelo Git). Tokens de sessões existentes antes da primeira inicialização com essa proteção precisarão ser renovados com novo login.
+
 Para incluir uma obra no catálogo, use `POST /api/catalogo` com o cabeçalho `x-admin-token` e os dados da obra. `preco_u` é em reais; `materiais` aceita IDs da tabela `Material`.
 
 ```json
@@ -45,7 +49,9 @@ Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/
 - `POST /api/auth/register`, `POST /api/auth/login` e `POST /api/auth/recuperar`
 - `GET/PATCH /api/perfil` e `POST /api/perfil/foto`
 - `GET /api/catalogo`
-- `GET /api/pedidos` e `GET /api/pedidos/rastrear/:codigo`; a criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
+- `GET /api/pedidos`, `GET /api/pedidos/rastrear/:codigo` e `GET /api/pedidos/feedbacks`
+- `PATCH /api/pedidos/:id/confirmar-entrega` e `POST /api/pedidos/:id/feedback` (multipart: `avaliacao`, `comentario`, `foto`); a avaliação requer entrega confirmada
+- A criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
 - `POST /api/pagamentos/checkout` e `POST /api/pagamentos/webhook`
 - `PATCH /api/pedidos/:id/envio` e `POST /api/catalogo` exigem `x-admin-token`
 - `POST /api/pedidos/:id/feedback`
@@ -56,4 +62,4 @@ Rotas protegidas usam `Authorization: Bearer <token>`. O banco é criado automat
 
 ## Modelo
 
-O SQLite contém `Clientes`, `Quadro` (incluindo `preco_u`), `Classificacao`, `Material`, `Material_Quadro`, `Artista`, `Pedido`, `Status`, `Feedback`, `Mensagem` e tabelas de pagamento. Senhas, foto, comentário, status de cobrança, rastreio e datas de envio são campos auxiliares. A inicialização migra bancos existentes e mantém as tabelas legadas necessárias para preservar pedidos e avaliações já salvos.
+O SQLite contém `Clientes` (incluindo CEP), `Quadro` (incluindo `preco_u`), `Classificacao`, `Material`, `Material_Quadro`, `Artista`, `Pedido` (com endereço de entrega e confirmação), `Status`, `Feedback` (incluindo foto), `Mensagem` e tabelas de pagamento. Senhas, foto, comentário, status de cobrança, rastreio e datas de envio são campos auxiliares. A inicialização migra bancos existentes e mantém as tabelas legadas necessárias para preservar pedidos e avaliações já salvos.
