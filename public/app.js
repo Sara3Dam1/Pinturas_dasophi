@@ -22,6 +22,7 @@ const api = async (url, options = {}) => {
 };
 
 function navigate(screen) {
+  if (!$("screen-" + screen)) screen = "home";
   document.querySelectorAll(".screen").forEach((element) => {
     element.classList.toggle("active", element.id === `screen-${screen}`);
   });
@@ -34,7 +35,10 @@ function navigate(screen) {
     loadOrders();
     renderCart();
   }
-  if (screen === "chat" && state.token) loadChat();
+  if (screen === "chat" && state.token) {
+    loadChat();
+    loadOrders();
+  }
   if (screen === "profile") loadProfile();
 }
 
@@ -66,7 +70,7 @@ function openAuth(register = false) {
   $("authSwitch").innerHTML = register
     ? "Já tem uma conta? <button>Entrar</button>"
     : "Ainda não tem conta? <button>Cadastre-se</button>";
-  $("recoverLink").classList.toggle("hidden", register);
+  ("recoverLink").classList.toggle("hidden", register);
   $("authFeedback").textContent = "";
   $("authDialog").showModal();
 }
@@ -84,7 +88,25 @@ function saveSession(data) {
 }
 
 function formatDate(value) {
+  if (!value) return "não informado";
   return new Date(value.replace(" ", "T")).toLocaleDateString("pt-BR");
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value) || 0);
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
 }
 
 async function loadCatalog() {
@@ -94,12 +116,13 @@ async function loadCatalog() {
       (item, index) => `
         <article class="art-card">
           <div class="art-image ${["one", "two", "three"][index % 3]}">
-            <div class="art-frame">${item.titulo.split(" ")[0]}</div>
+            <div class="art-frame">${escapeHTML(item.titulo.split(" ")[0])}</div>
           </div>
           <div class="art-card-info">
             <div>
-              <h3>${item.titulo}</h3>
-              <small>${item.tamanho || "tamanho sob consulta"} · ${item.des_material || "tela"}</small>
+              <h3>${escapeHTML(item.titulo)}</h3>
+              <small>${escapeHTML(item.tamanho || "tamanho sob consulta")} · ${escapeHTML(item.des_material || "tela")}</small>
+              <strong class="art-price">${Number(item.preco_u) > 0 ? formatCurrency(item.preco_u) : "Preço sob consulta"}</strong>
             </div>
             <button class="order-button" data-add-cart="${item.id_quadro}">Adicionar</button>
           </div>
@@ -114,7 +137,7 @@ async function loadCatalog() {
 
 function addToCart(id, catalog) {
   const item = catalog.find((entry) => String(entry.id_quadro) === String(id));
-  if (!item || state.cart.some((entry) => entry.id_quadro === item.id_quadro)) {
+  if (!item || state.cart.some((entry) => String(entry.id_quadro) === String(item.id_quadro))) {
     navigate("cart");
     return;
   }
@@ -137,15 +160,17 @@ function renderCart() {
         .map(
           (item) => `
             <div class="cart-row">
-              <div class="cart-thumb"><span>${item.titulo.split(" ")[0]}</span></div>
-              <div class="cart-info"><strong>${item.titulo}</strong><small>${item.tamanho || "tamanho sob consulta"} · original da artista</small></div>
+              <div class="cart-thumb"><span>${escapeHTML(item.titulo.split(" ")[0])}</span></div>
+              <div class="cart-info"><strong>${escapeHTML(item.titulo)}</strong><small>${escapeHTML(item.tamanho || "tamanho sob consulta")} · ${Number(item.preco_u) > 0 ? formatCurrency(item.preco_u) : "preço sob consulta"}</small></div>
               <button class="remove-button" data-remove-cart="${item.id_quadro}" title="Remover do carrinho">×</button>
             </div>`,
         )
         .join("")
     : '<div class="empty-state">Seu carrinho está vazio.<br />Encontre uma peça original na loja.</div>';
   $("cartFooter").classList.toggle("hidden", !state.cart.length);
-  $("cartTotal").textContent = state.cart.length;
+  $("cartTotal").textContent = formatCurrency(
+    state.cart.reduce((total, item) => total + Number(item.preco_u || 0), 0),
+  );
 
   document.querySelectorAll("[data-remove-cart]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -164,42 +189,46 @@ async function checkoutCart() {
   if (!state.cart.length) return;
 
   try {
-    const orders = [];
-    for (const item of state.cart) {
-      orders.push(await api("/pedidos", {
-        method: "POST",
-        body: JSON.stringify({ id_qua: item.id_quadro }),
-      }));
-    }
-    state.cart = [];
-    localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
-    renderCart();
-    await loadOrders();
-    alert(`Pedido criado. Código: ${orders[0].codigo_rastreamento}`);
+    const checkout = await api("/pagamentos/checkout", {
+      method: "POST",
+      body: JSON.stringify({
+        itens: state.cart.map((item) => item.id_quadro),
+        forma_pagamento: $("paymentMethod").value,
+      }),
+    });
+    sessionStorage.setItem("pinturas_checkout_cart", JSON.stringify(state.cart));
+    window.location.assign(checkout.checkout_url);
   } catch (error) {
-    alert(error.message);
+    showFeedback("checkoutFeedback", error.message);
   }
+}
+
+function renderOrders(target, orders, emptyText) {
+  target.innerHTML = orders.length
+    ? orders.map((order) => `
+        <div class="order-row">
+          <div><strong>${escapeHTML(order.titulo)}</strong><small>${order.codigo_rastreamento ? `Correios: ${escapeHTML(order.codigo_rastreamento)}` : "Rastreio após a postagem"} · ${order.previsao_entrega ? `previsão ${formatDate(order.previsao_entrega)}` : "prazo em análise"}</small></div>
+          <span class="order-status">${escapeHTML(order.descricao_status)}<br /><button class="dialog-link feedback-action" data-feedback="${Number(order.id_ped)}">Avaliar</button></span>
+        </div>`).join("")
+    : `<div class="empty-state">${emptyText}</div>`;
+  target.querySelectorAll("[data-feedback]").forEach((button) => {
+    button.addEventListener("click", () => sendFeedback(button.dataset.feedback));
+  });
 }
 
 async function loadOrders() {
   if (!state.token) {
     $("ordersList").textContent = "Entre para visualizar seus pedidos.";
+    $("chatOrdersList").textContent = "Entre para consultar pedidos e avaliações.";
     return;
   }
   try {
     const orders = await api("/pedidos");
-    $("ordersList").innerHTML = orders.length
-      ? orders.map((order) => `
-          <div class="order-row">
-            <div><strong>${order.titulo}</strong><small>${order.codigo_rastreamento || "sem código"} · ${order.previsao_entrega ? `previsão ${formatDate(order.previsao_entrega)}` : "em análise"}</small></div>
-            <span class="order-status">${order.descricao_status}<br /><button class="dialog-link feedback-action" data-feedback="${order.id_ped}">Avaliar</button></span>
-          </div>`).join("")
-      : '<div class="empty-state">Você ainda não tem pedidos.<br />Finalize uma compra para começar.</div>';
-    document.querySelectorAll("[data-feedback]").forEach((button) => {
-      button.addEventListener("click", () => sendFeedback(button.dataset.feedback));
-    });
+    renderOrders($("ordersList"), orders, "Você ainda não tem pedidos.<br />Finalize uma compra para começar.");
+    renderOrders($("chatOrdersList"), orders, "Seus pedidos e avaliações aparecerão aqui.");
   } catch (error) {
     $("ordersList").textContent = error.message;
+    $("chatOrdersList").textContent = error.message;
   }
 }
 
@@ -224,8 +253,8 @@ async function loadChat() {
   $("messages").innerHTML = messages
     .map((message) => `
       <div class="message ${message.remetente === "cliente" ? "sent" : "received"}">
-        <strong>${message.remetente === "cliente" ? state.client.nome : "Sophi"} <small>${formatDate(message.data_envio)}</small></strong>
-        <p>${message.texto}</p>
+        <strong>${escapeHTML(message.remetente === "cliente" ? state.client.nome : "Sophi")} <small>${formatDate(message.data_envio)}</small></strong>
+        <p>${escapeHTML(message.texto)}</p>
       </div>`)
     .join("");
   $("messages").scrollTop = $("messages").scrollHeight;
@@ -239,6 +268,8 @@ async function loadProfile() {
   const profile = await api("/perfil");
   $("profileName").value = profile.nome || "";
   $("profilePhone").value = profile.telefone || "";
+  $("profileCpf").value = profile.CPF || "";
+  $("profileHouseNumber").value = profile.numero_casa || "";
   $("profileStreet").value = profile.rua || "";
   $("profileNeighborhood").value = profile.bairro || "";
 }
@@ -256,6 +287,10 @@ $("logoutButton").addEventListener("click", () => {
   state.client = null;
   localStorage.removeItem("pinturas_token");
   localStorage.removeItem("pinturas_client");
+  $("email").value = "";
+  $("password").value = "";
+  $("name").value = "";
+  $("authFeedback").textContent = "";
   updateHeader();
   navigate("home");
 });
@@ -304,6 +339,8 @@ $("profileForm").addEventListener("submit", async (event) => {
       body: JSON.stringify({
         nome: $("profileName").value,
         telefone: $("profilePhone").value,
+        CPF: $("profileCpf").value,
+        numero_casa: $("profileHouseNumber").value,
         rua: $("profileStreet").value,
         bairro: $("profileNeighborhood").value,
       }),
@@ -347,7 +384,7 @@ $("trackingForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     const order = await api(`/pedidos/rastrear/${encodeURIComponent($("trackingCode").value)}`);
-    $("trackingResult").innerHTML = `<p class="feedback">${order.descricao_status}. Previsão de entrega: ${formatDate(order.previsao_entrega)}.</p>`;
+    $("trackingResult").innerHTML = `<p class="feedback">${escapeHTML(order.descricao_status)}. ${order.codigo_rastreamento ? `Código dos Correios: ${escapeHTML(order.codigo_rastreamento)}.` : "O código será informado quando o quadro for postado."} Previsão de entrega: ${formatDate(order.previsao_entrega)}.</p>`;
   } catch (error) {
     $("trackingResult").innerHTML = `<p class="feedback">${error.message}</p>`;
   }
@@ -357,4 +394,25 @@ updateHeader();
 renderCart();
 loadCatalog();
 loadOrders();
-navigate(location.hash.replace("#", "") || "home");
+const [initialScreen, paymentReturn] = location.hash.replace("#", "").split("?");
+navigate(initialScreen || "home");
+if (paymentReturn) {
+  const result = new URLSearchParams(paymentReturn).get("pagamento");
+  if (result === "sucesso") {
+    state.cart = [];
+    localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
+    sessionStorage.removeItem("pinturas_checkout_cart");
+    renderCart();
+    loadOrders();
+    showFeedback("checkoutFeedback", "Pagamento recebido. O pedido será atualizado após confirmação do Mercado Pago.");
+  } else if (result === "pendente" || result === "falhou") {
+    const previousCart = sessionStorage.getItem("pinturas_checkout_cart");
+    if (previousCart) {
+      state.cart = JSON.parse(previousCart);
+      localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
+      sessionStorage.removeItem("pinturas_checkout_cart");
+      renderCart();
+    }
+    showFeedback("checkoutFeedback", result === "pendente" ? "Pagamento pendente. Conclua ou confira as instruções do Mercado Pago." : "O pagamento não foi concluído. Você pode tentar novamente.");
+  }
+}
