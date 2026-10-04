@@ -26,6 +26,22 @@ router.post("/checkout", requireAuth, async (req, res) => {
     return res.status(400).json({ erro: "Selecione os quadros e uma forma de pagamento valida." });
   }
 
+  const endereco = req.body.endereco || {};
+  const address = {
+    rua: String(endereco.rua || "").trim(),
+    numero_casa: String(endereco.numero_casa || "").trim(),
+    bairro: String(endereco.bairro || "").trim(),
+    cep: String(endereco.cep || "").replace(/\D/g, ""),
+  };
+  if (
+    !address.rua || address.rua.length > 160 ||
+    !address.numero_casa || address.numero_casa.length > 30 ||
+    !address.bairro || address.bairro.length > 100 ||
+    !/^\d{8}$/.test(address.cep)
+  ) {
+    return res.status(400).json({ erro: "Confirme rua, numero, bairro e CEP valido antes de pagar." });
+  }
+
   const placeholders = itemIds.map(() => "?").join(",");
   const items = db.prepare(`
     SELECT id_quadro, titulo, tamanho, preco_u
@@ -50,8 +66,10 @@ router.post("/checkout", requireAuth, async (req, res) => {
     VALUES (?, ?, ?)
   `);
   const orderInsert = db.prepare(`
-    INSERT INTO Pedido (id_qua, id_status, id_cli, previsao_entrega)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO Pedido (
+      id_qua, id_status, id_cli, previsao_entrega,
+      rua_entrega, numero_casa_entrega, bairro_entrega, cep_entrega
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const linkInsert = db.prepare(
     "INSERT INTO Pagamento_Pedido (id_pagamento, id_ped) VALUES (?, ?)",
@@ -60,12 +78,20 @@ router.post("/checkout", requireAuth, async (req, res) => {
   try {
     db.exec("BEGIN");
     const payment = paymentInsert.run(reference, paymentMethod, req.user.id);
+    db.prepare(`
+      UPDATE Clientes SET rua = ?, numero_casa = ?, bairro = ?, cep = ?
+      WHERE Id_Cli = ?
+    `).run(address.rua, address.numero_casa, address.bairro, address.cep, req.user.id);
     for (const item of items) {
       const order = orderInsert.run(
         item.id_quadro,
         pendingStatus.id_status,
         req.user.id,
         expectedDate,
+        address.rua,
+        address.numero_casa,
+        address.bairro,
+        address.cep,
       );
       linkInsert.run(payment.lastInsertRowid, order.lastInsertRowid);
     }

@@ -12,6 +12,7 @@ const profileFields = [
   "numero_casa",
   "rua",
   "bairro",
+  "cep",
 ];
 
 router.get("/", requireAuth, (req, res) => {
