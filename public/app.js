@@ -1,11 +1,39 @@
 const state = {
   token: localStorage.getItem("pinturas_token"),
   client: JSON.parse(localStorage.getItem("pinturas_client") || "null"),
-  cart: JSON.parse(localStorage.getItem("pinturas_cart") || "[]"),
+  cart: [],
   register: false,
 };
 
 const $ = (id) => document.getElementById(id);
+const userCartKey = (clientId) => `pinturas_cart_${clientId}`;
+
+function loadUserCart(clientId) {
+  try {
+    const cart = JSON.parse(localStorage.getItem(userCartKey(clientId)) || "[]");
+    return Array.isArray(cart) ? cart : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCart() {
+  if (!state.token || !state.client?.Id_Cli) return;
+  localStorage.setItem(userCartKey(state.client.Id_Cli), JSON.stringify(state.cart));
+}
+
+function restoreCart() {
+  localStorage.removeItem("pinturas_cart");
+  if (!state.token || !state.client?.Id_Cli) {
+    state.token = null;
+    state.client = null;
+    state.cart = [];
+    localStorage.removeItem("pinturas_token");
+    localStorage.removeItem("pinturas_client");
+    return;
+  }
+  state.cart = loadUserCart(state.client.Id_Cli);
+}
 
 const api = async (url, options = {}) => {
   const response = await fetch(`/api${url}`, {
@@ -46,10 +74,16 @@ function updateHeader() {
   $("loginButton").classList.toggle("hidden", Boolean(state.token));
   $("logoutButton").classList.toggle("hidden", !state.token);
   $("profileButton").classList.toggle("hidden", !state.token);
-  if (state.client) {
-    const initial = state.client.nome?.[0]?.toUpperCase() || "S";
-    $("profileButton").textContent = initial;
-    $("profileInitial").textContent = initial;
+  const initial = state.client?.nome?.[0]?.toUpperCase() || "S";
+  $("profileButton").textContent = initial;
+  $("profileInitial").textContent = initial;
+  const photo = state.client?.foto;
+  const photoImage = $("profileAvatarImage");
+  if (photoImage) {
+    photoImage.classList.toggle("hidden", !photo);
+    if (photo) photoImage.src = photo;
+    else photoImage.removeAttribute("src");
+    $("profileInitial").classList.toggle("hidden", Boolean(photo));
   }
 }
 
@@ -70,7 +104,7 @@ function openAuth(register = false) {
   $("authSwitch").innerHTML = register
     ? "Já tem uma conta? <button>Entrar</button>"
     : "Ainda não tem conta? <button>Cadastre-se</button>";
-  ("recoverLink").classList.toggle("hidden", register);
+  $("recoverLink").classList.toggle("hidden", register);
   $("authFeedback").textContent = "";
   $("authDialog").showModal();
 }
@@ -78,9 +112,12 @@ function openAuth(register = false) {
 function saveSession(data) {
   state.token = data.token;
   state.client = data.cliente;
+  state.cart = loadUserCart(state.client.Id_Cli);
   localStorage.setItem("pinturas_token", state.token);
   localStorage.setItem("pinturas_client", JSON.stringify(state.client));
+  localStorage.removeItem("pinturas_cart");
   updateHeader();
+  renderCart();
   $("authDialog").close();
   navigate("profile");
   loadOrders();
@@ -143,7 +180,7 @@ function addToCart(id, catalog) {
   }
 
   state.cart.push(item);
-  localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
+  persistCart();
   updateCartBadge();
   navigate("cart");
 }
@@ -175,7 +212,7 @@ function renderCart() {
   document.querySelectorAll("[data-remove-cart]").forEach((button) => {
     button.addEventListener("click", () => {
       state.cart = state.cart.filter((item) => String(item.id_quadro) !== button.dataset.removeCart);
-      localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
+      persistCart();
       renderCart();
     });
   });
@@ -196,7 +233,10 @@ async function checkoutCart() {
         forma_pagamento: $("paymentMethod").value,
       }),
     });
-    sessionStorage.setItem("pinturas_checkout_cart", JSON.stringify(state.cart));
+    sessionStorage.setItem("pinturas_checkout_cart", JSON.stringify({
+      clientId: state.client.Id_Cli,
+      items: state.cart,
+    }));
     window.location.assign(checkout.checkout_url);
   } catch (error) {
     showFeedback("checkoutFeedback", error.message);
@@ -266,6 +306,9 @@ async function loadProfile() {
     return;
   }
   const profile = await api("/perfil");
+  state.client = profile;
+  localStorage.setItem("pinturas_client", JSON.stringify(profile));
+  updateHeader();
   $("profileName").value = profile.nome || "";
   $("profilePhone").value = profile.telefone || "";
   $("profileCpf").value = profile.CPF || "";
@@ -285,13 +328,18 @@ $("loginButton").addEventListener("click", () => openAuth());
 $("logoutButton").addEventListener("click", () => {
   state.token = null;
   state.client = null;
+  state.cart = [];
   localStorage.removeItem("pinturas_token");
   localStorage.removeItem("pinturas_client");
+  localStorage.removeItem("pinturas_cart");
+  sessionStorage.removeItem("pinturas_checkout_cart");
+  $("profileForm").reset();
   $("email").value = "";
   $("password").value = "";
   $("name").value = "";
   $("authFeedback").textContent = "";
   updateHeader();
+  renderCart();
   navigate("home");
 });
 
@@ -345,22 +393,40 @@ $("profileForm").addEventListener("submit", async (event) => {
         bairro: $("profileNeighborhood").value,
       }),
     });
-    const photo = $("profilePhoto").files[0];
-    if (photo) {
-      const form = new FormData();
-      form.append("foto", photo);
-      await fetch("/api/perfil/foto", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${state.token}` },
-        body: form,
-      });
-    }
     state.client = client;
     localStorage.setItem("pinturas_client", JSON.stringify(client));
     updateHeader();
     showFeedback("profileFeedback", "Perfil atualizado.");
   } catch (error) {
     showFeedback("profileFeedback", error.message);
+  }
+});
+
+$("profileAvatarButton").addEventListener("click", () => $("profilePhoto").click());
+
+$("profilePhoto").addEventListener("change", async () => {
+  const photo = $("profilePhoto").files[0];
+  if (!photo) return;
+  if (!state.token) return openAuth();
+
+  const form = new FormData();
+  form.append("foto", photo);
+  try {
+    const response = await fetch("/api/perfil/foto", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${state.token}` },
+      body: form,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.erro || "Não foi possível atualizar a foto.");
+    state.client = { ...state.client, foto: result.foto };
+    localStorage.setItem("pinturas_client", JSON.stringify(state.client));
+    updateHeader();
+    showFeedback("profileFeedback", "Foto de perfil atualizada.");
+  } catch (error) {
+    showFeedback("profileFeedback", error.message);
+  } finally {
+    $("profilePhoto").value = "";
   }
 });
 
@@ -390,6 +456,7 @@ $("trackingForm").addEventListener("submit", async (event) => {
   }
 });
 
+restoreCart();
 updateHeader();
 renderCart();
 loadCatalog();
@@ -399,20 +466,23 @@ navigate(initialScreen || "home");
 if (paymentReturn) {
   const result = new URLSearchParams(paymentReturn).get("pagamento");
   if (result === "sucesso") {
-    state.cart = [];
-    localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
+    const checkout = JSON.parse(sessionStorage.getItem("pinturas_checkout_cart") || "null");
+    if (checkout?.clientId === state.client?.Id_Cli) {
+      state.cart = [];
+      persistCart();
+    }
     sessionStorage.removeItem("pinturas_checkout_cart");
     renderCart();
     loadOrders();
     showFeedback("checkoutFeedback", "Pagamento recebido. O pedido será atualizado após confirmação do Mercado Pago.");
   } else if (result === "pendente" || result === "falhou") {
-    const previousCart = sessionStorage.getItem("pinturas_checkout_cart");
-    if (previousCart) {
-      state.cart = JSON.parse(previousCart);
-      localStorage.setItem("pinturas_cart", JSON.stringify(state.cart));
-      sessionStorage.removeItem("pinturas_checkout_cart");
+    const checkout = JSON.parse(sessionStorage.getItem("pinturas_checkout_cart") || "null");
+    if (checkout?.clientId === state.client?.Id_Cli && Array.isArray(checkout.items)) {
+      state.cart = checkout.items;
+      persistCart();
       renderCart();
     }
+    sessionStorage.removeItem("pinturas_checkout_cart");
     showFeedback("checkoutFeedback", result === "pendente" ? "Pagamento pendente. Conclua ou confira as instruções do Mercado Pago." : "O pagamento não foi concluído. Você pode tentar novamente.");
   }
 }

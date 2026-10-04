@@ -1011,13 +1011,30 @@ input:focus {
 .profile-large {
   align-items: center;
   background: var(--pink);
+  border: 0;
   border-radius: 50%;
   color: var(--white);
+  cursor: pointer;
   display: flex;
   font-size: 22px;
   height: 58px;
   justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  transition: transform 0.2s;
   width: 58px;
+}
+.profile-large:hover {
+  transform: scale(1.04);
+}
+.profile-large:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.profile-large img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .setting-row {
