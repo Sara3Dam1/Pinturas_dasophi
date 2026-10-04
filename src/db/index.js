@@ -47,7 +47,8 @@ db.exec(`
     tamanho TEXT,
     id_cla INTEGER REFERENCES Classificacao(id_cla),
     id_mat INTEGER REFERENCES Material(Id_mat),
-    id_artista INTEGER REFERENCES Artista(id_artista)
+    id_artista INTEGER REFERENCES Artista(id_artista),
+    preco_u REAL NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS Status_Pedido (
@@ -72,6 +73,42 @@ db.exec(`
     comentario TEXT,
     data_avaliacao TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id_cli, id_ped)
+  );
+
+  CREATE TABLE IF NOT EXISTS Status (
+    id_status INTEGER PRIMARY KEY AUTOINCREMENT,
+    descricao_status TEXT NOT NULL UNIQUE
+  );
+
+  CREATE TABLE IF NOT EXISTS Material_Quadro (
+    id_qua INTEGER NOT NULL REFERENCES Quadro(id_quadro) ON DELETE CASCADE,
+    id_mat INTEGER NOT NULL REFERENCES Material(Id_mat),
+    PRIMARY KEY (id_qua, id_mat)
+  );
+
+  CREATE TABLE IF NOT EXISTS Feedback (
+    id_cli INTEGER NOT NULL REFERENCES Clientes(Id_Cli),
+    id_ped INTEGER NOT NULL REFERENCES Pedido(id_ped),
+    avaliacao INTEGER NOT NULL CHECK (avaliacao BETWEEN 1 AND 5),
+    comentario TEXT,
+    data_pedido TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_cli, id_ped)
+  );
+
+  CREATE TABLE IF NOT EXISTS Pagamento (
+    id_pagamento INTEGER PRIMARY KEY AUTOINCREMENT,
+    referencia_externa TEXT NOT NULL UNIQUE,
+    preference_id TEXT,
+    status_pagamento TEXT NOT NULL DEFAULT 'pending',
+    forma_pagamento TEXT NOT NULL,
+    id_cli INTEGER NOT NULL REFERENCES Clientes(Id_Cli),
+    data_criacao TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS Pagamento_Pedido (
+    id_pagamento INTEGER NOT NULL REFERENCES Pagamento(id_pagamento),
+    id_ped INTEGER NOT NULL UNIQUE REFERENCES Pedido(id_ped),
+    PRIMARY KEY (id_pagamento, id_ped)
   );
 
   CREATE TABLE IF NOT EXISTS Mensagem (
@@ -128,5 +165,55 @@ function seed() {
 }
 
 seed();
+
+const quadroColumns = db.prepare("PRAGMA table_info(Quadro)").all();
+if (!quadroColumns.some((column) => column.name === "preco_u")) {
+  db.exec("ALTER TABLE Quadro ADD COLUMN preco_u REAL NOT NULL DEFAULT 0");
+}
+
+const pedidoColumns = db.prepare("PRAGMA table_info(Pedido)").all();
+if (!pedidoColumns.some((column) => column.name === "data_envio")) {
+  db.exec("ALTER TABLE Pedido ADD COLUMN data_envio TEXT");
+}
+
+const feedbackColumns = db.prepare("PRAGMA table_info(Feedback)").all();
+if (!feedbackColumns.some((column) => column.name === "comentario")) {
+  db.exec("ALTER TABLE Feedback ADD COLUMN comentario TEXT");
+}
+
+db.exec(`
+  INSERT OR IGNORE INTO Status (id_status, descricao_status)
+  SELECT id_status, descricao_status FROM Status_Pedido;
+
+  INSERT OR IGNORE INTO Status (descricao_status) VALUES
+    ('Aguardando pagamento'),
+    ('Pagamento aprovado'),
+    ('Cancelado');
+
+  DELETE FROM Status_Pedido
+  WHERE id_status > (SELECT MAX(id_status) FROM Status)
+    AND id_status NOT IN (SELECT id_status FROM Pedido);
+
+  INSERT OR IGNORE INTO Status_Pedido (id_status, descricao_status)
+  SELECT id_status, descricao_status FROM Status WHERE id_status > 4;
+
+  UPDATE Status_Pedido
+  SET descricao_status = (
+    SELECT descricao_status FROM Status WHERE Status.id_status = Status_Pedido.id_status
+  )
+  WHERE id_status > 4 AND id_status IN (SELECT id_status FROM Status);
+
+  UPDATE Pedido
+  SET codigo_rastreamento = NULL
+  WHERE data_envio IS NULL
+    AND codigo_rastreamento LIKE 'PS-%'
+    AND id_status <> (SELECT id_status FROM Status WHERE descricao_status = 'Enviado');
+
+  INSERT OR IGNORE INTO Material_Quadro (id_qua, id_mat)
+  SELECT id_quadro, id_mat FROM Quadro WHERE id_mat IS NOT NULL;
+
+  INSERT OR IGNORE INTO Feedback (id_cli, id_ped, avaliacao, comentario, data_pedido)
+  SELECT id_cli, id_ped, avaliacao, comentario, data_avaliacao FROM Feedback_Pedido;
+`);
 
 module.exports = db;
