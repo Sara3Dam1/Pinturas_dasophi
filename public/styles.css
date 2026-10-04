@@ -19,8 +19,12 @@ html {
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--paper);
+  background-color: var(--paper);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(87, 104, 117, 0.025) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(87, 104, 117, 0.02) 0 1px, transparent 1px 4px);
   font-family: "DM Sans", sans-serif;
+  font-size: 16px;
 }
 a {
   color: inherit;
@@ -61,7 +65,7 @@ button {
   font-size: 11px;
   height: 34px;
   justify-content: center;
-  letter-spacing: -1px;
+  letter-spacing: 0;
   width: 34px;
 }
 nav {
@@ -72,7 +76,7 @@ nav {
 nav a,
 .social {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 nav a:hover,
 .social:hover {
@@ -84,7 +88,32 @@ nav a:hover,
   gap: 15px;
 }
 .social {
-  font-size: 12px;
+  align-items: center;
+  border-radius: 8px;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+.social svg {
+  fill: none;
+  height: 25px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 25px;
+}
+.social-shopee {
+  background: #ee4d2d;
+  color: #fff;
+}
+.social-instagram {
+  background: linear-gradient(135deg, #feda75, #fa7e1e 35%, #d62976 65%, #4f5bd5);
+  color: #fff;
+}
+.instagram-dot {
+  fill: currentColor;
 }
 .button {
   border: 1px solid transparent;
@@ -139,9 +168,9 @@ nav a:hover,
 }
 .eyebrow {
   color: #c987a2;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   margin: 0 0 18px;
   text-transform: uppercase;
 }
@@ -154,7 +183,7 @@ h2 {
   margin: 0;
 }
 h1 {
-  font-size: clamp(48px, 6vw, 80px);
+  font-size: 72px;
 }
 h1 em,
 h2 em {
@@ -163,7 +192,7 @@ h2 em {
 }
 .hero-text {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.7;
   margin: 28px 0 35px;
   max-width: 390px;
@@ -240,7 +269,7 @@ h2 em {
   padding: 70px 11vw;
 }
 .catalog-section {
-  background: var(--cream);
+  background: rgba(234, 244, 251, 0.74);
 }
 .section-heading {
   align-items: end;
@@ -253,7 +282,7 @@ h2 {
 }
 .section-note {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.6;
   max-width: 250px;
 }
@@ -263,7 +292,7 @@ h2 {
   grid-template-columns: repeat(3, 1fr);
 }
 .art-card {
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.92);
   padding: 10px 10px 20px;
 }
 .art-image {
@@ -320,17 +349,23 @@ h2 {
 }
 .art-card small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
+}
+.art-price {
+  color: var(--ink);
+  display: block;
+  font-size: 15px;
+  margin-top: 8px;
 }
 .order-button {
   background: transparent;
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 11px;
+  font-size: 14px;
   padding: 9px 11px;
 }
 .workspace-section {
-  background: var(--paper);
+  background: rgba(247, 251, 255, 0.56);
 }
 .workspace-grid {
   display: grid;
@@ -338,7 +373,7 @@ h2 {
   grid-template-columns: 1.1fr 0.9fr;
 }
 .panel {
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--line);
   min-height: 270px;
   padding: 25px;
@@ -361,7 +396,7 @@ h3 {
 }
 .empty-state {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   padding: 65px 10px;
   text-align: center;
 }
@@ -373,16 +408,16 @@ h3 {
 }
 .order-row strong {
   display: block;
-  font-size: 14px;
+  font-size: 16px;
   margin-bottom: 5px;
 }
 .order-row small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .order-status {
   color: #c987a2;
-  font-size: 11px;
+  font-size: 13px;
   text-align: right;
 }
 .online {
@@ -409,25 +444,27 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 13px;
-  height: 145px;
+  height: 440px;
   overflow: auto;
   padding: 22px 0 9px;
 }
 .message {
   border-radius: 2px;
-  font-size: 12px;
-  max-width: 85%;
-  padding: 10px 13px;
+  font-size: 16px;
+  line-height: 1.55;
+  max-width: 88%;
+  padding: 14px 17px;
 }
 .message p {
   margin: 5px 0 0;
 }
 .message strong {
-  font-size: 11px;
+  font-size: 14px;
 }
 .message small {
   color: var(--muted);
   font-weight: 400;
+  font-size: 12px;
   margin-left: 8px;
 }
 .received {
@@ -447,13 +484,15 @@ h3 {
   border: 0;
   flex: 1;
   outline: 0;
+  font-size: 16px;
+  padding: 12px 8px;
 }
 .send-button {
   background: var(--ink);
   border: 0;
   color: white;
-  height: 30px;
-  width: 30px;
+  height: 42px;
+  width: 42px;
 }
 .help-band {
   align-items: start;
@@ -472,21 +511,21 @@ h3 {
 }
 .help-items details {
   border-bottom: 1px solid rgba(52, 68, 90, 0.18);
-  padding: 17px 0;
+  padding: 22px 0;
 }
 summary {
   cursor: pointer;
-  font-size: 14px;
+  font-size: 17px;
 }
 .help-items p {
   color: #536b85;
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.8;
   max-width: 460px;
 }
 footer {
   display: flex;
-  font-size: 11px;
+  font-size: 13px;
   justify-content: space-between;
   padding: 25px 6vw;
 }
@@ -522,7 +561,7 @@ dialog h2 {
 label {
   color: var(--muted);
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   margin: 15px 0;
 }
 input {
@@ -568,7 +607,7 @@ input:focus {
 }
 .feedback {
   color: #c987a2;
-  font-size: 12px;
+  font-size: 14px;
   min-height: 18px;
 }
 @media (max-width: 800px) {
@@ -576,8 +615,7 @@ input:focus {
     gap: 12px;
     padding: 18px 5vw;
   }
-  nav,
-  .social {
+  nav {
     display: none;
   }
   .header-actions {
@@ -586,6 +624,9 @@ input:focus {
   .hero {
     grid-template-columns: 1fr;
     padding: 45px 8vw 65px;
+  }
+  h1 {
+    font-size: 52px;
   }
   .hero-art {
     height: 310px;
@@ -606,6 +647,18 @@ input:focus {
   .workspace-grid,
   .help-band {
     grid-template-columns: 1fr;
+  }
+  .chat-layout,
+  .cart-layout,
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+  .chat-panel,
+  .chat-history {
+    min-height: 0;
+  }
+  .messages {
+    height: 360px;
   }
   .catalog-grid {
     gap: 16px;
@@ -630,7 +683,7 @@ input:focus {
   background: none;
   border: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   padding: 6px 0;
   position: relative;
 }
@@ -673,7 +726,7 @@ input:focus {
 }
 
 .home-links {
-  background: var(--paper);
+  background: rgba(247, 251, 255, 0.5);
 }
 
 .quick-grid {
@@ -727,7 +780,7 @@ input:focus {
 
 .quick-card small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
   margin-top: 8px;
   max-width: 210px;
@@ -751,13 +804,38 @@ input:focus {
 
 .screen-intro > p:last-child {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.7;
   max-width: 420px;
 }
 
-.chat-full {
-  max-width: 760px;
+.chat-layout {
+  align-items: stretch;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.85fr);
+}
+.chat-panel,
+.chat-history {
+  min-height: 590px;
+}
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+}
+.chat-history .order-row {
+  align-items: start;
+  gap: 14px;
+}
+.chat-history .order-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.chat-history .order-status {
+  flex: 0 0 auto;
+}
+.chat-history .empty-state {
+  padding: 75px 10px;
 }
 
 .cart-layout,
@@ -806,7 +884,7 @@ input:focus {
 
 .cart-info strong {
   font-family: "Playfair Display", serif;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -814,7 +892,7 @@ input:focus {
 .tracking-panel p,
 .profile-heading p {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
   margin: 5px 0 0;
 }
@@ -827,16 +905,76 @@ input:focus {
 }
 
 .cart-footer {
-  align-items: center;
+  align-items: end;
   display: flex;
-  font-size: 12px;
+  font-size: 15px;
+  gap: 18px;
   justify-content: space-between;
   padding-top: 22px;
+}
+.checkout-summary {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  max-width: 340px;
+}
+.checkout-summary label {
+  margin: 0;
+}
+.checkout-summary select {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 8px 10px;
+  width: 100%;
+}
+.checkout-summary strong {
+  font-size: 18px;
+}
+.tracking-panel p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.tracking-form {
+  align-items: end;
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+}
+.tracking-form input {
+  min-width: 0;
+}
+.cart-panel .feedback {
+  margin-bottom: 0;
 }
 
 .tracking-mark {
   color: var(--pink);
   font-size: 26px;
+}
+
+@media (max-width: 520px) {
+  .hero-actions,
+  .cart-footer,
+  .tracking-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .hero-actions {
+    gap: 18px;
+  }
+  .cart-footer .button,
+  .tracking-form .button {
+    width: 100%;
+  }
+  .checkout-summary {
+    max-width: none;
+  }
+  .message {
+    max-width: 96%;
+  }
 }
 
 .tracking-form {
@@ -860,7 +998,7 @@ input:focus {
 
 .profile-section,
 .help-screen {
-  background: var(--paper);
+  background: rgba(247, 251, 255, 0.56);
 }
 
 .profile-heading {
@@ -897,12 +1035,12 @@ input:focus {
 
 .setting-row strong {
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .setting-row small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 13px;
   margin-top: 4px;
 }
 
@@ -916,7 +1054,7 @@ input:focus {
 }
 
 .help-screen .help-items {
-  background: var(--blue);
+  background: rgba(185, 220, 237, 0.72);
   max-width: 820px;
   padding: 18px 35px;
 }
@@ -927,13 +1065,17 @@ input:focus {
   }
 
   .main-nav button {
-    font-size: 11px;
+    font-size: 14px;
   }
 }
 
 @media (max-width: 800px) {
   .main-nav {
     display: none;
+  }
+
+  h1 {
+    font-size: 52px;
   }
 
   .quick-grid,
