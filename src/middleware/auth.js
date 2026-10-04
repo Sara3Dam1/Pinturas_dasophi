@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const db = require("../db");
 const { jwtSecret } = require("../config");
 
 function requireAuth(req, res, next) {
@@ -10,7 +11,16 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    req.user = jwt.verify(token, jwtSecret);
+    const payload = jwt.verify(token, jwtSecret);
+    const userId = Number(payload.id);
+    if (
+      !Number.isSafeInteger(userId) ||
+      userId < 1 ||
+      !db.prepare("SELECT 1 FROM Clientes WHERE Id_Cli = ?").get(userId)
+    ) {
+      return res.status(401).json({ erro: "Sessao invalida." });
+    }
+    req.user = { ...payload, id: userId };
     return next();
   } catch {
     return res.status(401).json({ erro: "Sessao expirada ou invalida." });
