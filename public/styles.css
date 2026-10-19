@@ -10,6 +10,93 @@
   --line: #d7e5ef;
   --white: #fff;
 }
+.admin-toolbar,
+.admin-layout,
+.admin-conversation-heading {
+  align-items: start;
+  display: flex;
+  gap: 22px;
+}
+.admin-toolbar {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.5fr);
+}
+.admin-login-panel {
+  margin: 0 auto;
+  max-width: 460px;
+  min-height: 0;
+}
+.admin-conversations {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.admin-conversation-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  display: block;
+  padding: 13px 2px;
+  text-align: left;
+  width: 100%;
+}
+.admin-conversation-item.active {
+  background: var(--cream);
+  padding-left: 10px;
+}
+.admin-conversation-item strong,
+.admin-conversation-item small,
+.admin-conversation-item span {
+  display: block;
+}
+.admin-conversation-item small,
+.admin-conversation-item span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.admin-conversation {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.admin-conversation-heading {
+  overflow-wrap: anywhere;
+}
+.admin-conversation-heading small {
+  color: var(--muted);
+  display: block;
+  margin-top: 5px;
+}
+.admin-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 350px;
+  min-height: 80px;
+  overflow-y: auto;
+  padding: 14px 0;
+}
+.admin-messages .message {
+  font-size: 14px;
+  max-width: 90%;
+  overflow-wrap: anywhere;
+  padding: 10px 13px;
+}
+.admin-messages .message strong {
+  font-size: 12px;
+}
+.admin-inbox .panel-title {
+  align-items: center;
+}
+input[type="file"] {
+  font-size: 13px;
+}
 * {
   box-sizing: border-box;
 }
@@ -302,6 +389,15 @@ h2 {
   justify-content: center;
   overflow: hidden;
   padding-bottom: 24px;
+  position: relative;
+}
+.art-image > img {
+  height: 100%;
+  object-fit: cover;
+  padding-bottom: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
 }
 .art-image.one {
   background: #c5e1ee;
@@ -535,6 +631,13 @@ footer span:nth-child(2) {
 footer a {
   color: #c987a2;
 }
+.footer-admin-link {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: inherit;
+  padding: 0;
+}
 dialog {
   background: var(--paper);
   border: 0;
@@ -650,7 +753,8 @@ input:focus {
   }
   .chat-layout,
   .cart-layout,
-  .profile-layout {
+  .profile-layout,
+  .admin-layout {
     grid-template-columns: 1fr;
   }
   .chat-panel,
@@ -670,6 +774,9 @@ input:focus {
     gap: 12px;
     flex-wrap: wrap;
     padding: 22px 8vw;
+  }
+  .admin-toolbar {
+    align-items: start;
   }
 }
 
@@ -913,6 +1020,12 @@ input:focus {
   height: 62px;
   justify-content: center;
   width: 58px;
+  overflow: hidden;
+}
+.cart-thumb img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
 }
 
 .cart-thumb span {

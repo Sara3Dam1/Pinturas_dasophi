@@ -25,6 +25,7 @@
         <button data-screen="chat">Chat de encomendas</button>
         <button data-screen="cart">Carrinho <span id="cartBadge">0</span></button>
         <button data-screen="help">Ajuda</button>
+        <button data-screen="admin">Administração</button>
       </nav>
 
       <div class="header-actions">
@@ -92,6 +93,51 @@
         <div class="panel orders-panel orders-full"><div class="panel-title"><h3>Histórico de pedidos</h3><span class="panel-count">seus pedidos</span></div><div id="ordersList" class="empty-state">Entre para visualizar seus pedidos.</div></div>
       </section>
 
+      <section id="screen-admin" class="screen section admin-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">Área restrita</p><h2>Painel do<br /><em>ateliê.</em></h2></div>
+          <p class="section-note">Cadastre quadros e responda às conversas dos seus clientes.</p>
+        </div>
+        <div id="adminLoginPanel" class="panel admin-login-panel">
+          <h3>Entrar como administradora</h3>
+          <form id="adminLoginForm">
+            <label>E-mail<input id="adminLoginEmail" type="email" autocomplete="username" required /></label>
+            <label>Senha<input id="adminLoginPassword" type="password" autocomplete="current-password" required /></label>
+            <button class="button dark full" type="submit">Entrar no painel</button>
+            <p id="adminLoginFeedback" class="feedback" role="status"></p>
+          </form>
+        </div>
+        <div id="adminWorkspace" class="hidden">
+          <div class="admin-toolbar"><p id="adminIdentity" class="panel-count"></p><button id="adminLogoutButton" class="button ghost" type="button">Sair do painel</button></div>
+          <div class="admin-layout">
+            <div class="panel admin-products">
+              <div class="panel-title"><h3>Adicionar quadro</h3></div>
+              <form id="adminProductForm">
+                <label>Título<input id="adminProductTitle" name="titulo" maxlength="160" required /></label>
+                <label>Tamanho<input id="adminProductSize" name="tamanho" maxlength="100" /></label>
+                <label>Preço em reais<input id="adminProductPrice" name="preco_u" type="number" min="0.01" step="0.01" required /></label>
+                <label>Foto do quadro<input id="adminProductPhoto" name="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" /></label>
+                <button class="button dark full" type="submit">Adicionar à loja</button>
+                <p id="adminProductFeedback" class="feedback" role="status"></p>
+              </form>
+            </div>
+            <div class="panel admin-inbox">
+              <div class="panel-title"><h3>Mensagens de clientes</h3><button id="adminRefreshButton" class="dialog-link" type="button">Atualizar</button></div>
+              <div id="adminConversationList" class="admin-conversations"><p class="empty-state">Carregando conversas...</p></div>
+              <div id="adminConversation" class="admin-conversation hidden">
+                <div id="adminConversationHeading" class="panel-title"></div>
+                <div id="adminMessages" class="admin-messages"></div>
+                <form id="adminMessageForm" class="chat-form">
+                  <input id="adminMessageInput" maxlength="2000" placeholder="Escreva uma resposta..." autocomplete="off" required />
+                  <button class="send-button" title="Enviar resposta" aria-label="Enviar resposta">↗</button>
+                </form>
+                <p id="adminMessageFeedback" class="feedback" role="status"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="screen-profile" class="screen section profile-section">
         <div class="section-heading"><div><p class="eyebrow">Área pessoal</p><h2>Seu perfil e<br /><em>configurações.</em></h2></div><p class="section-note">Mantenha seus dados atualizados para facilitar encomendas e entregas.</p></div>
         <div class="profile-layout"><div class="panel"><form id="profileForm"><input id="profilePhoto" class="hidden" type="file" accept="image/*" aria-label="Selecionar foto de perfil" /><div class="profile-heading"><button id="profileAvatarButton" class="profile-large" type="button" aria-label="Alterar foto de perfil" title="Alterar foto de perfil"><img id="profileAvatarImage" class="hidden" alt="" /><span id="profileInitial">S</span></button><div><h3>Dados de identificação</h3><p>Essas informações aparecem no seu atendimento.</p></div></div><label>Nome<input id="profileName" required /></label><label>Telefone<input id="profilePhone" /></label><label>CPF<input id="profileCpf" inputmode="numeric" /></label><label>Número da casa<input id="profileHouseNumber" /></label><label>Rua<input id="profileStreet" /></label><label>Bairro<input id="profileNeighborhood" /></label><label>CEP<input id="profileCep" inputmode="numeric" autocomplete="postal-code" /></label><button class="button dark full" type="submit">Salvar alterações</button><p id="profileFeedback" class="feedback"></p></form></div><div class="panel settings-panel"><h3>Configurações</h3><label class="setting-row"><span><strong>Atualizações de pedidos</strong><small>Receber novidades sobre o andamento.</small></span><input type="checkbox" checked /></label><label class="setting-row"><span><strong>Novidades do ateliê</strong><small>Saber quando novos quadros chegarem.</small></span><input type="checkbox" /></label><button class="button ghost" data-screen="help">Abrir ajuda</button></div></div>
@@ -103,7 +149,7 @@
       </section>
     </main>
 
-    <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
+    <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><button class="footer-admin-link" data-screen="admin" type="button">Área administrativa</button><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
 
     <dialog id="addressDialog" class="workflow-dialog"><button class="dialog-close" aria-label="Fechar">×</button><p class="eyebrow">Antes do pagamento</p><h2>Confirme seu<br /><em>endereço.</em></h2><p class="dialog-description">Este é o endereço que será salvo neste pedido e usado para a entrega.</p><form id="addressForm"><label>Rua<input id="checkoutStreet" required maxlength="160" autocomplete="street-address" /></label><label>Número da casa<input id="checkoutHouseNumber" required maxlength="30" autocomplete="address-line2" /></label><label>Bairro<input id="checkoutNeighborhood" required maxlength="100" /></label><label>CEP<input id="checkoutCep" required inputmode="numeric" pattern="[0-9]{5}-?[0-9]{3}" maxlength="9" autocomplete="postal-code" /></label><button class="button dark full" type="submit">Confirmar endereço e continuar</button><p id="addressFeedback" class="feedback" role="status"></p></form></dialog>
 

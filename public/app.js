@@ -1,6 +1,10 @@
 const state = {
   token: localStorage.getItem("pinturas_token"),
   client: JSON.parse(localStorage.getItem("pinturas_client") || "null"),
+  adminToken: sessionStorage.getItem("pinturas_admin_token"),
+  adminEmail: sessionStorage.getItem("pinturas_admin_email"),
+  adminClientId: null,
+  adminConversations: [],
   cart: [],
   register: false,
 };
@@ -63,6 +67,19 @@ const api = async (url, options = {}) => {
   return data;
 };
 
+const adminApi = async (url, options = {}) => {
+  const headers = {
+    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+    ...(state.adminToken ? { Authorization: `Bearer ${state.adminToken}` } : {}),
+    ...(options.headers || {}),
+  };
+  const response = await fetch(`/api${url}`, { ...options, headers });
+  const data = await response.json();
+  if (response.status === 401 && state.adminToken) logoutAdmin();
+  if (!response.ok) throw new Error(data.erro || "Ocorreu um erro.");
+  return data;
+};
+
 function navigate(screen) {
   if (!$("screen-" + screen)) screen = "home";
   document.querySelectorAll(".screen").forEach((element) => {
@@ -83,6 +100,7 @@ function navigate(screen) {
   }
   if (screen === "chat") loadPublicFeedbacks();
   if (screen === "profile") loadProfile();
+  if (screen === "admin") loadAdminPanel();
 }
 
 function updateHeader() {
@@ -173,7 +191,9 @@ async function loadCatalog() {
       (item, index) => `
         <article class="art-card">
           <div class="art-image ${["one", "two", "three"][index % 3]}">
-            <div class="art-frame">${escapeHTML(item.titulo.split(" ")[0])}</div>
+            ${item.foto
+              ? `<img src="${escapeHTML(item.foto)}" alt="${escapeHTML(item.titulo)}" loading="lazy" />`
+              : `<div class="art-frame">${escapeHTML(item.titulo.split(" ")[0])}</div>`}
           </div>
           <div class="art-card-info">
             <div>
@@ -217,7 +237,9 @@ function renderCart() {
         .map(
           (item) => `
             <div class="cart-row">
-              <div class="cart-thumb"><span>${escapeHTML(item.titulo.split(" ")[0])}</span></div>
+              <div class="cart-thumb">${item.foto
+                ? `<img src="${escapeHTML(item.foto)}" alt="" />`
+                : `<span>${escapeHTML(item.titulo.split(" ")[0])}</span>`}</div>
               <div class="cart-info"><strong>${escapeHTML(item.titulo)}</strong><small>${escapeHTML(item.tamanho || "tamanho sob consulta")} · ${Number(item.preco_u) > 0 ? formatCurrency(item.preco_u) : "preço sob consulta"}</small></div>
               <button class="remove-button" data-remove-cart="${item.id_quadro}" title="Remover do carrinho">×</button>
             </div>`,
@@ -427,6 +449,83 @@ async function loadProfile() {
   $("profileNeighborhood").value = profile.bairro || "";
 }
 
+function logoutAdmin() {
+  state.adminToken = null;
+  state.adminEmail = null;
+  state.adminClientId = null;
+  state.adminConversations = [];
+  sessionStorage.removeItem("pinturas_admin_token");
+  sessionStorage.removeItem("pinturas_admin_email");
+  $("adminLoginPanel").classList.remove("hidden");
+  $("adminWorkspace").classList.add("hidden");
+  $("adminLoginPassword").value = "";
+}
+
+async function loadAdminPanel() {
+  if (!state.adminToken) {
+    $("adminLoginPanel").classList.remove("hidden");
+    $("adminWorkspace").classList.add("hidden");
+    return;
+  }
+
+  $("adminLoginPanel").classList.add("hidden");
+  $("adminWorkspace").classList.remove("hidden");
+  $("adminIdentity").textContent = `Conectada como ${state.adminEmail || "administradora"}`;
+  await loadAdminConversations();
+}
+
+async function loadAdminConversations() {
+  const target = $("adminConversationList");
+  try {
+    state.adminConversations = await adminApi("/admin/conversas");
+    target.innerHTML = state.adminConversations.length
+      ? state.adminConversations.map((conversation) => `
+          <button class="admin-conversation-item ${Number(conversation.id_cli) === state.adminClientId ? "active" : ""}" type="button" data-admin-client="${Number(conversation.id_cli)}">
+            <strong>${escapeHTML(conversation.nome)}</strong>
+            <small>${escapeHTML(conversation.email)}</small>
+            <span>${escapeHTML(conversation.ultima_mensagem)}</span>
+          </button>`).join("")
+      : '<p class="empty-state">Nenhuma mensagem recebida ainda.</p>';
+
+    target.querySelectorAll("[data-admin-client]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.adminClientId = Number(button.dataset.adminClient);
+        loadAdminConversations();
+        loadAdminMessages();
+      });
+    });
+  } catch (error) {
+    target.innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+  }
+}
+
+async function loadAdminMessages() {
+  const conversation = state.adminConversations.find(
+    (item) => Number(item.id_cli) === state.adminClientId,
+  );
+  if (!conversation) {
+    $("adminConversation").classList.add("hidden");
+    return;
+  }
+
+  $("adminConversation").classList.remove("hidden");
+  $("adminConversationHeading").innerHTML = `
+    <div><strong>${escapeHTML(conversation.nome)}</strong><small>${escapeHTML(conversation.email)}</small></div>`;
+  try {
+    const messages = await adminApi(
+      `/admin/conversas/${state.adminClientId}/mensagens`,
+    );
+    $("adminMessages").innerHTML = messages.map((message) => `
+      <div class="message ${message.remetente === "contratante" ? "sent" : "received"}">
+        <strong>${message.remetente === "contratante" ? "Você" : escapeHTML(conversation.nome)} <small>${formatDate(message.data_envio)}</small></strong>
+        <p>${escapeHTML(message.texto)}</p>
+      </div>`).join("");
+    $("adminMessages").scrollTop = $("adminMessages").scrollHeight;
+  } catch (error) {
+    $("adminMessages").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+  }
+}
+
 document.querySelectorAll("[data-screen]").forEach((element) => {
   element.addEventListener("click", (event) => {
     event.preventDefault();
@@ -435,6 +534,80 @@ document.querySelectorAll("[data-screen]").forEach((element) => {
 });
 
 $("loginButton").addEventListener("click", () => openAuth());
+$("adminLoginForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("adminLoginForm").querySelector("button[type=submit]");
+  button.disabled = true;
+  showFeedback("adminLoginFeedback", "");
+  try {
+    const response = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: $("adminLoginEmail").value.trim(),
+        senha: $("adminLoginPassword").value,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.erro || "Não foi possível entrar no painel.");
+    state.adminToken = data.token;
+    state.adminEmail = data.email;
+    sessionStorage.setItem("pinturas_admin_token", data.token);
+    sessionStorage.setItem("pinturas_admin_email", data.email);
+    $("adminLoginPassword").value = "";
+    await loadAdminPanel();
+  } catch (error) {
+    showFeedback("adminLoginFeedback", error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+$("adminLogoutButton").addEventListener("click", logoutAdmin);
+$("adminRefreshButton").addEventListener("click", async () => {
+  await loadAdminConversations();
+  await loadAdminMessages();
+});
+$("adminProductForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("adminProductForm").querySelector("button[type=submit]");
+  button.disabled = true;
+  showFeedback("adminProductFeedback", "");
+  try {
+    const form = new FormData();
+    form.append("titulo", $("adminProductTitle").value.trim());
+    form.append("tamanho", $("adminProductSize").value.trim());
+    form.append("preco_u", $("adminProductPrice").value);
+    const photo = $("adminProductPhoto").files[0];
+    if (photo) form.append("foto", photo);
+    await adminApi("/catalogo", { method: "POST", body: form });
+    $("adminProductForm").reset();
+    showFeedback("adminProductFeedback", "Quadro adicionado à loja.");
+    await loadCatalog();
+  } catch (error) {
+    showFeedback("adminProductFeedback", error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+$("adminMessageForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.adminClientId) return;
+  const input = $("adminMessageInput");
+  const text = input.value.trim();
+  if (!text) return;
+  try {
+    await adminApi(`/admin/conversas/${state.adminClientId}/mensagens`, {
+      method: "POST",
+      body: JSON.stringify({ texto: text }),
+    });
+    input.value = "";
+    await loadAdminConversations();
+    await loadAdminMessages();
+    showFeedback("adminMessageFeedback", "");
+  } catch (error) {
+    showFeedback("adminMessageFeedback", error.message);
+  }
+});
 $("logoutButton").addEventListener("click", () => {
   clearChatMessages();
   clearLocalSession();
