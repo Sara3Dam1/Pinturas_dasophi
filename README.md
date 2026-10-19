@@ -19,7 +19,6 @@ O checkout usa o Mercado Pago para processar Pix ou cartão sem armazenar dados 
 export MERCADO_PAGO_ACCESS_TOKEN=seu_access_token
 export MERCADO_PAGO_WEBHOOK_SECRET=segredo_configurado_no_webhook
 export APP_URL=https://seu-dominio-publico.com
-export ADMIN_TOKEN=um_token_administrativo_forte
 npm start
 ```
 
@@ -29,7 +28,11 @@ O checkout pede a confirmação de rua, número, bairro e CEP antes de abrir o M
 
 Se `JWT_SECRET` não estiver definido, o servidor gera um segredo aleatório e o mantém em `data/jwt-secret` (diretório ignorado pelo Git). Tokens de sessões existentes antes da primeira inicialização com essa proteção precisarão ser renovados com novo login.
 
-Para incluir uma obra no catálogo, use `POST /api/catalogo` com o cabeçalho `x-admin-token` e os dados da obra. `preco_u` é em reais; `materiais` aceita IDs da tabela `Material`.
+Para cadastrar uma obra pela API, faça login em `POST /api/admin/login` e envie o token retornado como `Authorization: Bearer <token>` em `POST /api/catalogo`. `preco_u` é em reais; `materiais` aceita IDs da tabela `Material`. O cadastro também aceita uma foto no campo multipart `foto`.
+
+O painel administrativo fica em **Administração**. Configure `ADMIN_EMAIL` e `ADMIN_PASSWORD_HASH` no ambiente do servidor. A senha deve ser armazenada como hash bcrypt, nunca no código ou no navegador. Para gerar o hash de uma senha, execute `node -e 'console.log(require("bcryptjs").hashSync(process.argv[1], 12))' 'sua-senha'` em um terminal seguro. Em desenvolvimento, o projeto carrega essas variáveis de um arquivo `.env` local, ignorado pelo Git. O login administrativo emite um token temporário de oito horas; ele permite cadastrar quadros com preço e foto e responder às mensagens dos clientes. Use HTTPS em produção.
+
+No painel, o cadastro de quadros aceita título, tamanho, preço e uma foto opcional. As conversas incluem as mensagens recebidas pelo chat do cliente; as respostas da artista aparecem na mesma conversa.
 
 ```json
 {
@@ -42,7 +45,7 @@ Para incluir uma obra no catálogo, use `POST /api/catalogo` com o cabeçalho `x
 }
 ```
 
-Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/pedidos/:id/envio`, o mesmo cabeçalho administrativo e o corpo `{"codigo_rastreamento":"BR123456789BR"}`. A data estimada é atualizada para até sete dias corridos após a postagem.
+Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/pedidos/:id/envio`, usando o mesmo token administrativo e o corpo `{"codigo_rastreamento":"BR123456789BR"}`. A data estimada é atualizada para até sete dias corridos após a postagem.
 
 ## API REST
 
@@ -53,7 +56,8 @@ Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/
 - `PATCH /api/pedidos/:id/confirmar-entrega` e `POST /api/pedidos/:id/feedback` (multipart: `avaliacao`, `comentario`, `foto`); a avaliação requer entrega confirmada
 - A criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
 - `POST /api/pagamentos/checkout` e `POST /api/pagamentos/webhook`
-- `PATCH /api/pedidos/:id/envio` e `POST /api/catalogo` exigem `x-admin-token`
+- `POST /api/admin/login`, `GET /api/admin/conversas` e `GET/POST /api/admin/conversas/:id/mensagens` exigem login administrativo (exceto o login)
+- `PATCH /api/pedidos/:id/envio` e `POST /api/catalogo` exigem autenticação administrativa
 - `POST /api/pedidos/:id/feedback`
 - `GET/POST /api/chat`
 - `GET /api/health`
