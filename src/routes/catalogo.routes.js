@@ -1,6 +1,8 @@
 const express = require("express");
+const fs = require("node:fs");
 const db = require("../db");
 const { requireAdmin } = require("../middleware/admin");
+const upload = require("../middleware/upload");
 
 const router = express.Router();
 
@@ -28,19 +30,21 @@ router.get("/", (_req, res) => {
   res.json(catalog);
 });
 
-router.post("/", requireAdmin, (req, res) => {
+router.post("/", requireAdmin, upload.single("foto"), (req, res) => {
   const { titulo, tamanho, id_cla, id_artista, materiais = [] } = req.body;
   const preco = Number(req.body.preco_u);
   if (!String(titulo || "").trim() || !Number.isFinite(preco) || preco < 0) {
+    if (req.file) fs.unlinkSync(req.file.path);
     return res.status(400).json({ erro: "Informe titulo e preco valido para o quadro." });
   }
   if (!Array.isArray(materiais) || materiais.some((id) => !Number.isInteger(Number(id)))) {
+    if (req.file) fs.unlinkSync(req.file.path);
     return res.status(400).json({ erro: "A lista de materiais e invalida." });
   }
 
   const insert = db.prepare(`
-    INSERT INTO Quadro (titulo, tamanho, id_cla, id_artista, preco_u)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO Quadro (titulo, tamanho, id_cla, id_artista, preco_u, foto)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
   const addMaterial = db.prepare(
     "INSERT INTO Material_Quadro (id_qua, id_mat) VALUES (?, ?)",
@@ -54,6 +58,7 @@ router.post("/", requireAdmin, (req, res) => {
       id_cla || null,
       id_artista || null,
       preco,
+      req.file ? `/uploads/${req.file.filename}` : null,
     );
     for (const materialId of materiais) {
       addMaterial.run(result.lastInsertRowid, Number(materialId));
@@ -63,8 +68,10 @@ router.post("/", requireAdmin, (req, res) => {
   } catch (error) {
     db.exec("ROLLBACK");
     if (error.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(400).json({ erro: "Classificacao, artista ou material nao encontrado." });
     }
+    if (req.file) fs.unlinkSync(req.file.path);
     return res.status(500).json({ erro: "Nao foi possivel cadastrar o quadro." });
   }
 });
