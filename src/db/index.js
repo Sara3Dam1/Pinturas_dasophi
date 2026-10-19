@@ -177,6 +177,9 @@ const quadroColumns = db.prepare("PRAGMA table_info(Quadro)").all();
 if (!quadroColumns.some((column) => column.name === "preco_u")) {
   db.exec("ALTER TABLE Quadro ADD COLUMN preco_u REAL NOT NULL DEFAULT 0");
 }
+if (!quadroColumns.some((column) => column.name === "foto")) {
+  db.exec("ALTER TABLE Quadro ADD COLUMN foto TEXT");
+}
 
 const pedidoColumns = db.prepare("PRAGMA table_info(Pedido)").all();
 for (const [column, type] of [

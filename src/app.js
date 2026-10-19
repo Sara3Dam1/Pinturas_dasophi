@@ -4,6 +4,7 @@ const cors = require("cors");
 const { publicDir, uploadsDir } = require("./config");
 const healthRoutes = require("./routes/health.routes");
 const authRoutes = require("./routes/auth.routes");
+const adminRoutes = require("./routes/admin.routes");
 const profileRoutes = require("./routes/perfil.routes");
 const catalogRoutes = require("./routes/catalogo.routes");
 const orderRoutes = require("./routes/pedido.routes");
@@ -20,6 +21,7 @@ app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/perfil", profileRoutes);
 app.use("/api/catalogo", catalogRoutes);
 app.use("/api/pedidos", orderRoutes);

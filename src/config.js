@@ -1,6 +1,7 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const { randomBytes } = require("node:crypto");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const rootDir = path.join(__dirname, "..");
 const dataDir = path.join(rootDir, "data");
@@ -29,6 +30,8 @@ module.exports = {
   port: process.env.PORT || 3000,
   jwtSecret: getJwtSecret(),
   adminToken: process.env.ADMIN_TOKEN,
+  adminEmail: process.env.ADMIN_EMAIL?.trim().toLowerCase(),
+  adminPasswordHash: process.env.ADMIN_PASSWORD_HASH,
   mercadoPagoAccessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN,
   mercadoPagoWebhookSecret: process.env.MERCADO_PAGO_WEBHOOK_SECRET,
   appUrl: process.env.APP_URL,
