@@ -49,7 +49,8 @@ db.exec(`
     id_cla INTEGER REFERENCES Classificacao(id_cla),
     id_mat INTEGER REFERENCES Material(Id_mat),
     id_artista INTEGER REFERENCES Artista(id_artista),
-    preco_u REAL NOT NULL DEFAULT 0
+    preco_u REAL NOT NULL DEFAULT 0,
+    disponivel INTEGER NOT NULL DEFAULT 1
   );
 
   CREATE TABLE IF NOT EXISTS Status_Pedido (
@@ -179,6 +180,9 @@ if (!quadroColumns.some((column) => column.name === "preco_u")) {
 }
 if (!quadroColumns.some((column) => column.name === "foto")) {
   db.exec("ALTER TABLE Quadro ADD COLUMN foto TEXT");
+}
+if (!quadroColumns.some((column) => column.name === "disponivel")) {
+  db.exec("ALTER TABLE Quadro ADD COLUMN disponivel INTEGER NOT NULL DEFAULT 1");
 }
 
 const pedidoColumns = db.prepare("PRAGMA table_info(Pedido)").all();
