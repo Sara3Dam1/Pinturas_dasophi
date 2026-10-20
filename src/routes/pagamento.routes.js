@@ -1,16 +1,18 @@
-const { createHmac, randomUUID, timingSafeEqual } = require("node:crypto");
+const { randomUUID } = require("node:crypto");
 const express = require("express");
+const Stripe = require("stripe");
 const db = require("../db");
-const { appUrl, mercadoPagoAccessToken, mercadoPagoWebhookSecret } = require("../config");
+const { appUrl, paymentMode, stripeSecretKey, stripeWebhookSecret } = require("../config");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-const paymentApi = "https://api.mercadopago.com";
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+const demoMode = paymentMode === "demo";
 
 router.post("/checkout", requireAuth, async (req, res) => {
-  if (!mercadoPagoAccessToken || !appUrl || !mercadoPagoWebhookSecret) {
+  if (!demoMode && (!stripe || !appUrl || !stripeWebhookSecret)) {
     return res.status(503).json({
-      erro: "Configure o Mercado Pago, APP_URL e o segredo do webhook para habilitar pagamentos.",
+      erro: "Configure STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET e APP_URL para habilitar pagamentos.",
     });
   }
 
@@ -61,6 +63,9 @@ router.post("/checkout", requireAuth, async (req, res) => {
   const pendingStatus = db
     .prepare("SELECT id_status FROM Status WHERE descricao_status = ?")
     .get("Aguardando pagamento");
+  const approvedStatus = db
+    .prepare("SELECT id_status FROM Status WHERE descricao_status = ?")
+    .get("Pagamento aprovado");
   const paymentInsert = db.prepare(`
     INSERT INTO Pagamento (referencia_externa, forma_pagamento, id_cli)
     VALUES (?, ?, ?)
@@ -85,7 +90,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
     for (const item of items) {
       const order = orderInsert.run(
         item.id_quadro,
-        pendingStatus.id_status,
+        demoMode ? approvedStatus.id_status : pendingStatus.id_status,
         req.user.id,
         expectedDate,
         address.rua,
@@ -96,115 +101,127 @@ router.post("/checkout", requireAuth, async (req, res) => {
       linkInsert.run(payment.lastInsertRowid, order.lastInsertRowid);
     }
 
-    const excludedTypes = paymentMethod === "pix"
-      ? ["credit_card", "debit_card", "ticket", "atm"]
-      : ["bank_transfer", "ticket", "atm"];
-    const siteUrl = appUrl.replace(/\/$/, "");
-    const preferenceResponse = await fetch(`${paymentApi}/checkout/preferences`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${mercadoPagoAccessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        items: items.map((item) => ({
-          id: String(item.id_quadro),
-          title: item.titulo,
-          description: item.tamanho || "Quadro original Pinturas da Sophi",
-          quantity: 1,
-          currency_id: "BRL",
-          unit_price: item.preco_u,
-        })),
-        payer: { email: req.user.email },
-        external_reference: reference,
-        notification_url: `${siteUrl}/api/pagamentos/webhook`,
-        back_urls: {
-          success: `${siteUrl}/#cart?pagamento=sucesso`,
-          pending: `${siteUrl}/#cart?pagamento=pendente`,
-          failure: `${siteUrl}/#cart?pagamento=falhou`,
-        },
-        auto_return: "approved",
-        payment_methods: {
-          excluded_payment_types: excludedTypes.map((id) => ({ id })),
-        },
-      }),
-    });
-    const preference = await preferenceResponse.json();
-    if (!preferenceResponse.ok || !preference.init_point) {
-      throw new Error(preference.message || "O Mercado Pago nao criou o checkout.");
+    if (demoMode) {
+      db.prepare("UPDATE Pagamento SET status_pagamento = ? WHERE id_pagamento = ?")
+        .run("demo", payment.lastInsertRowid);
+      db.exec("COMMIT");
+      return res.status(201).json({
+        checkout_url: `/#cart?pagamento=demo&referencia=${encodeURIComponent(reference)}`,
+        referencia: reference,
+        modo_demo: true,
+      });
     }
 
+    const siteUrl = appUrl.replace(/\/$/, "");
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      locale: "pt-BR",
+      customer_email: req.user.email,
+      payment_method_types: [paymentMethod === "pix" ? "pix" : "card"],
+      line_items: items.map((item) => ({
+        price_data: {
+          currency: "brl",
+          product_data: {
+            name: item.titulo,
+            description: item.tamanho || "Quadro original Pinturas da Sophi",
+          },
+          unit_amount: Math.round(item.preco_u * 100),
+        },
+        quantity: 1,
+      })),
+      metadata: { referencia_externa: reference },
+      success_url: `${siteUrl}/#cart?pagamento=sucesso&referencia=${encodeURIComponent(reference)}`,
+      cancel_url: `${siteUrl}/#cart?pagamento=falhou&referencia=${encodeURIComponent(reference)}`,
+    });
+    if (!session.url) throw new Error("O Stripe nao retornou a URL do checkout.");
+
     db.prepare("UPDATE Pagamento SET preference_id = ? WHERE id_pagamento = ?")
-      .run(preference.id, payment.lastInsertRowid);
+      .run(session.id, payment.lastInsertRowid);
     db.exec("COMMIT");
-    return res.status(201).json({ checkout_url: preference.init_point, referencia: reference });
+    return res.status(201).json({ checkout_url: session.url, referencia: reference });
   } catch (error) {
     db.exec("ROLLBACK");
     return res.status(502).json({ erro: error.message || "Nao foi possivel iniciar o pagamento." });
   }
 });
 
-router.post("/webhook", async (req, res) => {
-  if (!mercadoPagoAccessToken || !mercadoPagoWebhookSecret) {
+router.get("/status/:reference", requireAuth, (req, res) => {
+  const payment = db.prepare(`
+    SELECT status_pagamento
+    FROM Pagamento
+    WHERE referencia_externa = ? AND id_cli = ?
+  `).get(req.params.reference, req.user.id);
+  if (!payment) return res.status(404).json({ erro: "Pagamento nao encontrado." });
+  return res.json({ status_pagamento: payment.status_pagamento });
+});
+
+router.post("/webhook", (req, res) => {
+  if (!stripe || !stripeWebhookSecret) {
     return res.status(503).json({ erro: "Webhook de pagamento nao configurado." });
   }
 
-  const dataId = String(req.query["data.id"] || req.body?.data?.id || "").toLowerCase();
-  const requestId = req.get("x-request-id") || "";
-  const signature = Object.fromEntries(
-    (req.get("x-signature") || "").split(",").map((part) => part.trim().split("=")),
-  );
-  if (!dataId || !requestId || !signature.ts || !signature.v1) {
-    return res.status(401).json({ erro: "Assinatura do webhook invalida." });
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      req.get("stripe-signature"),
+      stripeWebhookSecret,
+    );
+  } catch {
+    return res.status(400).json({ erro: "Assinatura do webhook Stripe invalida." });
   }
 
-  const manifest = `id:${dataId};request-id:${requestId};ts:${signature.ts};`;
-  const expectedSignature = createHmac("sha256", mercadoPagoWebhookSecret)
-    .update(manifest)
-    .digest();
-  let receivedSignature;
-  try {
-    receivedSignature = Buffer.from(signature.v1, "hex");
-  } catch {
-    return res.status(401).json({ erro: "Assinatura do webhook invalida." });
-  }
+  const supportedEvents = [
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+    "checkout.session.async_payment_failed",
+    "checkout.session.expired",
+  ];
+  if (!supportedEvents.includes(event.type)) return res.sendStatus(200);
+
+  const session = event.data.object;
+  const reference = session.metadata?.referencia_externa;
+  if (!reference) return res.status(400).json({ erro: "Referencia do pagamento ausente." });
+
+  const localPayment = db.prepare(
+    "SELECT id_pagamento FROM Pagamento WHERE referencia_externa = ?",
+  ).get(reference);
+  if (!localPayment) return res.status(404).json({ erro: "Referencia de pedido desconhecida." });
+
+  let paymentStatus;
+  let orderStatus;
   if (
-    receivedSignature.length !== expectedSignature.length ||
-    !timingSafeEqual(receivedSignature, expectedSignature)
+    event.type === "checkout.session.async_payment_succeeded" ||
+    (event.type === "checkout.session.completed" && session.payment_status === "paid")
   ) {
-    return res.status(401).json({ erro: "Assinatura do webhook invalida." });
-  }
-
-  try {
-    const paymentResponse = await fetch(`${paymentApi}/v1/payments/${encodeURIComponent(dataId)}`, {
-      headers: { Authorization: `Bearer ${mercadoPagoAccessToken}` },
-    });
-    const payment = await paymentResponse.json();
-    if (!paymentResponse.ok || !payment.external_reference) {
-      return res.status(400).json({ erro: "Pagamento nao localizado no Mercado Pago." });
-    }
-
-    const localPayment = db.prepare(
-      "SELECT id_pagamento FROM Pagamento WHERE referencia_externa = ?",
-    ).get(payment.external_reference);
-    if (!localPayment) return res.status(404).json({ erro: "Referencia de pedido desconhecida." });
-
-    db.prepare("UPDATE Pagamento SET status_pagamento = ? WHERE id_pagamento = ?")
-      .run(payment.status, localPayment.id_pagamento);
-    if (["approved", "cancelled", "rejected"].includes(payment.status)) {
-      const description = payment.status === "approved"
-        ? "Pagamento aprovado"
-        : "Cancelado";
-      const status = db.prepare(
-        "SELECT id_status FROM Status WHERE descricao_status = ?",
-      ).get(description);
-      db.prepare("UPDATE Pedido SET id_status = ? WHERE id_ped IN (SELECT id_ped FROM Pagamento_Pedido WHERE id_pagamento = ?)")
-        .run(status.id_status, localPayment.id_pagamento);
-    }
+    paymentStatus = "succeeded";
+    orderStatus = "Pagamento aprovado";
+  } else if (event.type === "checkout.session.async_payment_failed") {
+    paymentStatus = "failed";
+    orderStatus = "Cancelado";
+  } else if (event.type === "checkout.session.expired") {
+    paymentStatus = "expired";
+    orderStatus = "Cancelado";
+  } else {
     return res.sendStatus(200);
-  } catch {
-    return res.status(502).json({ erro: "Nao foi possivel confirmar o pagamento." });
   }
+
+  db.prepare("UPDATE Pagamento SET status_pagamento = ? WHERE id_pagamento = ?")
+    .run(paymentStatus, localPayment.id_pagamento);
+  const status = db.prepare(
+    "SELECT id_status FROM Status WHERE descricao_status = ?",
+  ).get(orderStatus);
+  const awaitingPayment = db.prepare(
+    "SELECT id_status FROM Status WHERE descricao_status = ?",
+  ).get("Aguardando pagamento");
+  db.prepare(`
+    UPDATE Pedido SET id_status = ?
+    WHERE id_ped IN (
+      SELECT id_ped FROM Pagamento_Pedido WHERE id_pagamento = ?
+    ) AND id_status = ?
+  `).run(status.id_status, localPayment.id_pagamento, awaitingPayment.id_status);
+
+  return res.sendStatus(200);
 });
 
 module.exports = router;

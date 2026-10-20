@@ -47,7 +47,6 @@ router.get("/feedbacks", (_req, res) => {
     JOIN Status s ON s.id_status = p.id_status
     WHERE s.descricao_status = 'Entregue'
       AND p.data_entrega_confirmada IS NOT NULL
-      AND f.foto IS NOT NULL
     ORDER BY f.data_pedido DESC
   `).all();
   res.json(feedbacks);
