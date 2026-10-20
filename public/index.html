@@ -25,7 +25,6 @@
         <button data-screen="chat">Chat de encomendas</button>
         <button data-screen="cart">Carrinho <span id="cartBadge">0</span></button>
         <button data-screen="help">Ajuda</button>
-        <button data-screen="admin">Administração</button>
       </nav>
 
       <div class="header-actions">
@@ -76,64 +75,49 @@
           <div><p class="eyebrow">Loja do ateliê</p><h2>Quadros <em>originais.</em></h2></div>
           <p class="section-note">Obras prontas, pintadas pela Sophi e disponíveis para compra. Cada peça existe uma única vez.</p>
         </div>
+        <div id="adminProductPanel" class="panel admin-products hidden">
+          <div class="panel-title"><h3>Adicionar quadro à venda</h3></div>
+          <form id="adminProductForm">
+            <label>Título<input id="adminProductTitle" name="titulo" maxlength="160" required /></label>
+            <label>Tamanho<input id="adminProductSize" name="tamanho" maxlength="100" /></label>
+            <label>Preço em reais<input id="adminProductPrice" name="preco_u" type="number" min="0.01" step="0.01" required /></label>
+            <label>Foto do quadro<input id="adminProductPhoto" name="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" /></label>
+            <button class="button dark" type="submit">Adicionar à loja</button>
+            <p id="adminProductFeedback" class="feedback" role="status"></p>
+          </form>
+        </div>
         <div id="catalogGrid" class="catalog-grid"></div>
       </section>
 
       <section id="screen-chat" class="screen section workspace-section">
-        <div class="screen-intro"><p class="eyebrow">Encomendas personalizadas</p><h2>Vamos criar algo<br /><em>seu?</em></h2><p>Conte para a Sophi o que você imaginou. Vocês combinam referências, tamanho, materiais e prazo diretamente por aqui.</p></div>
-        <div class="chat-layout">
+        <div class="screen-intro"><p class="eyebrow">Encomendas personalizadas</p><h2 id="chatTitle">Vamos criar algo<br /><em>seu?</em></h2><p id="chatDescription">Conte para a Sophi o que você imaginou. Vocês combinam referências, tamanho, materiais e prazo diretamente por aqui.</p></div>
+        <div id="customerChatLayout" class="chat-layout">
           <div class="panel chat-panel"><div class="panel-title"><div><h3>Conversa com a Sophi</h3><span class="online"><i></i> atendimento por mensagem</span></div><span class="chat-profile">S</span></div><div id="messages" class="messages"><div class="message received"><strong>Sophi <small>agora</small></strong><p>Oi! Me conte qual pintura você está imaginando.</p></div></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Escreva sua ideia de encomenda..." autocomplete="off" /><button class="send-button" title="Enviar mensagem" aria-label="Enviar mensagem">↗</button></form></div>
           <aside class="panel chat-history"><div class="panel-title"><h3>Encomendas e avaliações</h3><span class="tracking-mark">⌁</span></div><div id="chatOrdersList" class="empty-state">Entre para consultar suas encomendas.</div><h4 class="gallery-title">Avaliações com foto</h4><div id="feedbackGallery" class="feedback-gallery"><p class="empty-state">Nenhuma avaliação publicada ainda.</p></div></aside>
+        </div>
+        <div id="adminInboxPanel" class="panel admin-inbox hidden">
+          <div class="panel-title"><h3>Mensagens dos clientes</h3><button id="adminRefreshButton" class="dialog-link" type="button">Atualizar</button></div>
+          <div id="adminConversationList" class="admin-conversations"><p class="empty-state">Carregando conversas...</p></div>
+          <div id="adminConversation" class="admin-conversation hidden">
+            <div id="adminConversationHeading" class="panel-title"></div>
+            <div id="adminMessages" class="admin-messages"></div>
+            <form id="adminMessageForm" class="chat-form">
+              <input id="adminMessageInput" maxlength="2000" placeholder="Escreva uma resposta..." autocomplete="off" required />
+              <button class="send-button" title="Enviar resposta" aria-label="Enviar resposta">↗</button>
+            </form>
+            <p id="adminMessageFeedback" class="feedback" role="status"></p>
+          </div>
         </div>
       </section>
 
       <section id="screen-cart" class="screen section workspace-section">
-        <div class="section-heading"><div><p class="eyebrow">Seu espaço</p><h2>Carrinho e<br /><em>rastreio.</em></h2></div><p class="section-note">Confira suas peças originais, finalize o pedido e acompanhe o caminho até sua casa.</p></div>
-        <div class="cart-layout"><div class="panel cart-panel"><div class="panel-title"><h3>Itens selecionados</h3><span id="cartCount" class="panel-count">0 itens</span></div><div id="cartList" class="empty-state">Seu carrinho está vazio.<br />Encontre uma peça original na loja.</div><div id="cartFooter" class="cart-footer hidden"><div class="checkout-summary"><label for="paymentMethod">Forma de pagamento</label><select id="paymentMethod"><option value="pix">Pix</option><option value="cartao">Cartão de crédito ou débito</option></select><strong>Total <span id="cartTotal">R$ 0,00</span></strong></div><button id="checkoutButton" class="button dark">Pagar com segurança <span>↗</span></button></div><p id="checkoutFeedback" class="feedback" role="status"></p></div><div class="panel tracking-panel"><div class="panel-title"><h3>Rastrear pedido</h3><span class="tracking-mark">⌁</span></div><p>O código de rastreio aparece aqui e no histórico assim que o quadro for postado. O prazo inicial estimado é de até 14 dias corridos após a compra; depois da postagem, a previsão é atualizada com o prazo dos Correios.</p><form id="trackingForm" class="tracking-form"><input id="trackingCode" placeholder="Código dos Correios" required /><button class="button dark">Consultar</button></form><div id="trackingResult"></div></div></div>
-        <div class="panel orders-panel orders-full"><div class="panel-title"><h3>Histórico de pedidos</h3><span class="panel-count">seus pedidos</span></div><div id="ordersList" class="empty-state">Entre para visualizar seus pedidos.</div></div>
-      </section>
-
-      <section id="screen-admin" class="screen section admin-section">
-        <div class="section-heading">
-          <div><p class="eyebrow">Área restrita</p><h2>Painel do<br /><em>ateliê.</em></h2></div>
-          <p class="section-note">Cadastre quadros e responda às conversas dos seus clientes.</p>
-        </div>
-        <div id="adminLoginPanel" class="panel admin-login-panel">
-          <h3>Entrar como administradora</h3>
-          <form id="adminLoginForm">
-            <label>E-mail<input id="adminLoginEmail" type="email" autocomplete="username" required /></label>
-            <label>Senha<input id="adminLoginPassword" type="password" autocomplete="current-password" required /></label>
-            <button class="button dark full" type="submit">Entrar no painel</button>
-            <p id="adminLoginFeedback" class="feedback" role="status"></p>
-          </form>
-        </div>
-        <div id="adminWorkspace" class="hidden">
-          <div class="admin-toolbar"><p id="adminIdentity" class="panel-count"></p><button id="adminLogoutButton" class="button ghost" type="button">Sair do painel</button></div>
-          <div class="admin-layout">
-            <div class="panel admin-products">
-              <div class="panel-title"><h3>Adicionar quadro</h3></div>
-              <form id="adminProductForm">
-                <label>Título<input id="adminProductTitle" name="titulo" maxlength="160" required /></label>
-                <label>Tamanho<input id="adminProductSize" name="tamanho" maxlength="100" /></label>
-                <label>Preço em reais<input id="adminProductPrice" name="preco_u" type="number" min="0.01" step="0.01" required /></label>
-                <label>Foto do quadro<input id="adminProductPhoto" name="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" /></label>
-                <button class="button dark full" type="submit">Adicionar à loja</button>
-                <p id="adminProductFeedback" class="feedback" role="status"></p>
-              </form>
-            </div>
-            <div class="panel admin-inbox">
-              <div class="panel-title"><h3>Mensagens de clientes</h3><button id="adminRefreshButton" class="dialog-link" type="button">Atualizar</button></div>
-              <div id="adminConversationList" class="admin-conversations"><p class="empty-state">Carregando conversas...</p></div>
-              <div id="adminConversation" class="admin-conversation hidden">
-                <div id="adminConversationHeading" class="panel-title"></div>
-                <div id="adminMessages" class="admin-messages"></div>
-                <form id="adminMessageForm" class="chat-form">
-                  <input id="adminMessageInput" maxlength="2000" placeholder="Escreva uma resposta..." autocomplete="off" required />
-                  <button class="send-button" title="Enviar resposta" aria-label="Enviar resposta">↗</button>
-                </form>
-                <p id="adminMessageFeedback" class="feedback" role="status"></p>
-              </div>
-            </div>
+        <div class="section-heading"><div><p class="eyebrow">Seu espaço</p><h2 id="cartTitle">Carrinho e<br /><em>rastreio.</em></h2></div><p id="cartDescription" class="section-note">Confira suas peças originais, finalize o pedido e acompanhe o caminho até sua casa.</p></div>
+        <div id="customerCartLayout" class="cart-layout"><div class="panel cart-panel"><div class="panel-title"><h3>Itens selecionados</h3><span id="cartCount" class="panel-count">0 itens</span></div><div id="cartList" class="empty-state">Seu carrinho está vazio.<br />Encontre uma peça original na loja.</div><div id="cartFooter" class="cart-footer hidden"><div class="checkout-summary"><label for="paymentMethod">Forma de pagamento</label><select id="paymentMethod"><option value="pix">Pix</option><option value="cartao">Cartão de crédito ou débito</option></select><strong>Total <span id="cartTotal">R$ 0,00</span></strong></div><button id="checkoutButton" class="button dark">Pagar com segurança <span>↗</span></button></div><p id="checkoutFeedback" class="feedback" role="status"></p></div><div class="panel tracking-panel"><div class="panel-title"><h3>Rastrear pedido</h3><span class="tracking-mark">⌁</span></div><p>O código de rastreio aparece aqui e no histórico assim que o quadro for postado. O prazo inicial estimado é de até 14 dias corridos após a compra; depois da postagem, a previsão é atualizada com o prazo dos Correios.</p><form id="trackingForm" class="tracking-form"><input id="trackingCode" placeholder="Código dos Correios" required /><button class="button dark">Consultar</button></form><div id="trackingResult"></div></div></div>
+        <div id="customerOrdersPanel" class="panel orders-panel orders-full"><div class="panel-title"><h3>Histórico de pedidos</h3><span class="panel-count">seus pedidos</span></div><div id="ordersList" class="empty-state">Entre para visualizar seus pedidos.</div></div>
+        <div id="adminOrdersWorkspace" class="hidden">
+          <div class="admin-order-groups">
+            <section class="panel orders-panel"><div class="panel-title"><h3>Em andamento</h3><span id="adminActiveOrderCount" class="panel-count">0 pedidos</span></div><div id="adminActiveOrders" class="admin-orders"><p class="empty-state">Carregando pedidos...</p></div></section>
+            <section class="panel orders-panel"><div class="panel-title"><h3>Concluídos</h3><span id="adminCompletedOrderCount" class="panel-count">0 pedidos</span></div><div id="adminCompletedOrders" class="admin-orders"><p class="empty-state">Nenhum pedido concluído.</p></div></section>
           </div>
         </div>
       </section>
@@ -149,7 +133,7 @@
       </section>
     </main>
 
-    <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><button class="footer-admin-link" data-screen="admin" type="button">Área administrativa</button><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
+    <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
 
     <dialog id="addressDialog" class="workflow-dialog"><button class="dialog-close" aria-label="Fechar">×</button><p class="eyebrow">Antes do pagamento</p><h2>Confirme seu<br /><em>endereço.</em></h2><p class="dialog-description">Este é o endereço que será salvo neste pedido e usado para a entrega.</p><form id="addressForm"><label>Rua<input id="checkoutStreet" required maxlength="160" autocomplete="street-address" /></label><label>Número da casa<input id="checkoutHouseNumber" required maxlength="30" autocomplete="address-line2" /></label><label>Bairro<input id="checkoutNeighborhood" required maxlength="100" /></label><label>CEP<input id="checkoutCep" required inputmode="numeric" pattern="[0-9]{5}-?[0-9]{3}" maxlength="9" autocomplete="postal-code" /></label><button class="button dark full" type="submit">Confirmar endereço e continuar</button><p id="addressFeedback" class="feedback" role="status"></p></form></dialog>
 

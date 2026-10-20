@@ -31,6 +31,70 @@
   max-width: 460px;
   min-height: 0;
 }
+.admin-products {
+  margin-bottom: 24px;
+  min-height: 0;
+}
+.admin-products form {
+  align-items: end;
+  display: grid;
+  gap: 14px 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20px;
+}
+.admin-products label {
+  margin: 0;
+}
+.admin-products .feedback {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.admin-order-groups {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.admin-orders {
+  display: grid;
+}
+.admin-order-card {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 7px;
+  padding: 16px 0;
+}
+.admin-order-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.admin-order-heading strong {
+  font-family: "Playfair Display", serif;
+  font-size: 18px;
+  font-weight: 500;
+}
+.admin-order-card p,
+.admin-order-card small {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.admin-shipping-form {
+  align-items: end;
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.admin-shipping-form label {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+.admin-shipping-form .feedback {
+  margin: 0;
+}
 .admin-conversations {
   max-height: 280px;
   overflow-y: auto;
@@ -754,7 +818,9 @@ input:focus {
   .chat-layout,
   .cart-layout,
   .profile-layout,
-  .admin-layout {
+  .admin-layout,
+  .admin-order-groups,
+  .admin-products form {
     grid-template-columns: 1fr;
   }
   .chat-panel,
@@ -777,6 +843,10 @@ input:focus {
   }
   .admin-toolbar {
     align-items: start;
+  }
+  .admin-shipping-form {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
@@ -1063,6 +1133,12 @@ input:focus {
   border: 0;
   color: var(--muted);
   font-size: 20px;
+}
+.art-card-info .remove-button {
+  border: 1px solid var(--line);
+  font-size: 13px;
+  padding: 8px 10px;
+  white-space: nowrap;
 }
 
 .cart-footer {

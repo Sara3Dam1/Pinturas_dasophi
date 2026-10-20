@@ -11,6 +11,7 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 const userCartKey = (clientId) => `pinturas_cart_${clientId}`;
+const isAdmin = () => Boolean(state.adminToken);
 
 function loadUserCart(clientId) {
   try {
@@ -28,6 +29,14 @@ function persistCart() {
 
 function restoreCart() {
   localStorage.removeItem("pinturas_cart");
+  if (isAdmin()) {
+    state.token = null;
+    state.client = null;
+    state.cart = [];
+    localStorage.removeItem("pinturas_token");
+    localStorage.removeItem("pinturas_client");
+    return;
+  }
   if (!state.token || !state.client?.Id_Cli) {
     state.token = null;
     state.client = null;
@@ -82,6 +91,8 @@ const adminApi = async (url, options = {}) => {
 
 function navigate(screen) {
   if (!$("screen-" + screen)) screen = "home";
+  if (isAdmin() && screen === "profile") screen = "store";
+  updateHeader();
   document.querySelectorAll(".screen").forEach((element) => {
     element.classList.toggle("active", element.id === `screen-${screen}`);
   });
@@ -90,23 +101,53 @@ function navigate(screen) {
   });
   history.replaceState(null, "", `#${screen}`);
 
+  if (screen === "store") loadCatalog();
   if (screen === "cart") {
-    loadOrders();
-    renderCart();
+    if (isAdmin()) loadAdminOrders();
+    else {
+      loadOrders();
+      renderCart();
+    }
   }
-  if (screen === "chat" && state.token) {
+  if (screen === "chat" && isAdmin()) {
+    loadAdminConversations();
+    if (state.adminClientId) loadAdminMessages();
+  } else if (screen === "chat" && state.token) {
     loadChat();
     loadOrders();
   }
   if (screen === "chat") loadPublicFeedbacks();
   if (screen === "profile") loadProfile();
-  if (screen === "admin") loadAdminPanel();
 }
 
 function updateHeader() {
-  $("loginButton").classList.toggle("hidden", Boolean(state.token));
-  $("logoutButton").classList.toggle("hidden", !state.token);
-  $("profileButton").classList.toggle("hidden", !state.token);
+  const administrator = isAdmin();
+  $("loginButton").classList.toggle("hidden", Boolean(state.token || administrator));
+  $("logoutButton").classList.toggle("hidden", !state.token && !administrator);
+  $("logoutButton").textContent = administrator ? "Sair do ateliê" : "Sair";
+  $("profileButton").classList.toggle("hidden", !state.token || administrator);
+  $("adminProductPanel").classList.toggle("hidden", !administrator);
+  $("customerChatLayout").classList.toggle("hidden", administrator);
+  $("adminInboxPanel").classList.toggle("hidden", !administrator);
+  $("customerCartLayout").classList.toggle("hidden", administrator);
+  $("customerOrdersPanel").classList.toggle("hidden", administrator);
+  $("adminOrdersWorkspace").classList.toggle("hidden", !administrator);
+  $("chatTitle").innerHTML = administrator
+    ? "Mensagens dos<br /><em>clientes.</em>"
+    : "Vamos criar algo<br /><em>seu?</em>";
+  $("chatDescription").textContent = administrator
+    ? "Acompanhe as conversas e responda às encomendas enviadas pelos clientes."
+    : "Conte para a Sophi o que você imaginou. Vocês combinam referências, tamanho, materiais e prazo diretamente por aqui.";
+  $("cartTitle").innerHTML = administrator
+    ? "Pedidos do<br /><em>ateliê.</em>"
+    : "Carrinho e<br /><em>rastreio.</em>";
+  $("cartDescription").textContent = administrator
+    ? "Acompanhe os pedidos em andamento e consulte os que já foram concluídos."
+    : "Confira suas peças originais, finalize o pedido e acompanhe o caminho até sua casa.";
+  const cartNavigation = document.querySelector('[data-screen="cart"]');
+  const cartBadge = $("cartBadge");
+  cartNavigation.textContent = administrator ? "Pedidos " : "Carrinho ";
+  cartNavigation.append(cartBadge);
   const initial = state.client?.nome?.[0]?.toUpperCase() || "S";
   $("profileButton").textContent = initial;
   $("profileInitial").textContent = initial;
@@ -148,6 +189,25 @@ function openAuth(register = false) {
 
 function saveSession(data) {
   clearChatMessages();
+  if (data.role === "admin") {
+    state.token = null;
+    state.client = null;
+    state.cart = [];
+    localStorage.removeItem("pinturas_token");
+    localStorage.removeItem("pinturas_client");
+    state.adminToken = data.token;
+    state.adminEmail = data.email;
+    sessionStorage.setItem("pinturas_admin_token", data.token);
+    sessionStorage.setItem("pinturas_admin_email", data.email);
+    $("authDialog").close();
+    updateHeader();
+    navigate("store");
+    return;
+  }
+  state.adminToken = null;
+  state.adminEmail = null;
+  sessionStorage.removeItem("pinturas_admin_token");
+  sessionStorage.removeItem("pinturas_admin_email");
   state.token = data.token;
   state.client = data.cliente;
   state.cart = loadUserCart(state.client.Id_Cli);
@@ -201,7 +261,9 @@ async function loadCatalog() {
               <small>${escapeHTML(item.tamanho || "tamanho sob consulta")} · ${escapeHTML(item.des_material || "tela")}</small>
               <strong class="art-price">${Number(item.preco_u) > 0 ? formatCurrency(item.preco_u) : "Preço sob consulta"}</strong>
             </div>
-            <button class="order-button" data-add-cart="${item.id_quadro}">Adicionar</button>
+            ${isAdmin()
+              ? `<button class="remove-button" data-remove-product="${item.id_quadro}" title="Retirar quadro da venda">Retirar da venda</button>`
+              : `<button class="order-button" data-add-cart="${item.id_quadro}">Adicionar</button>`}
           </div>
         </article>`,
     )
@@ -210,9 +272,23 @@ async function loadCatalog() {
   document.querySelectorAll("[data-add-cart]").forEach((button) => {
     button.addEventListener("click", () => addToCart(button.dataset.addCart, catalog));
   });
+  document.querySelectorAll("[data-remove-product]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!confirm("Retirar este quadro da venda?")) return;
+      button.disabled = true;
+      try {
+        await adminApi(`/catalogo/${button.dataset.removeProduct}`, { method: "DELETE" });
+        await loadCatalog();
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 function addToCart(id, catalog) {
+  if (isAdmin()) return;
   const item = catalog.find((entry) => String(entry.id_quadro) === String(id));
   if (!item || state.cart.some((entry) => String(entry.id_quadro) === String(item.id_quadro))) {
     navigate("cart");
@@ -261,6 +337,7 @@ function renderCart() {
 }
 
 function checkoutCart() {
+  if (isAdmin()) return;
   if (!state.token) return openAuth();
   if (!state.cart.length) return;
   $("checkoutStreet").value = state.client?.rua || "";
@@ -342,6 +419,10 @@ function renderOrders(target, orders, emptyText) {
 }
 
 async function loadOrders() {
+  if (isAdmin()) {
+    await loadAdminOrders();
+    return;
+  }
   if (!state.token) {
     $("ordersList").textContent = "Entre para visualizar seus pedidos.";
     $("chatOrdersList").textContent = "Entre para consultar pedidos e avaliações.";
@@ -354,6 +435,69 @@ async function loadOrders() {
   } catch (error) {
     $("ordersList").textContent = error.message;
     $("chatOrdersList").textContent = error.message;
+  }
+}
+
+function renderAdminOrders(target, orders, emptyText) {
+  target.innerHTML = orders.length
+    ? orders.map((order) => {
+        const canShip = ["Pagamento aprovado", "Em producao"].includes(order.descricao_status);
+        const tracking = order.codigo_rastreamento
+          ? `Correios: ${escapeHTML(order.codigo_rastreamento)} · previsão ${formatDate(order.previsao_entrega)}`
+          : "Sem código de rastreio";
+        return `
+          <article class="admin-order-card">
+            <div class="admin-order-heading">
+              <strong>${escapeHTML(order.titulo)}</strong>
+              <span class="order-status">${escapeHTML(order.descricao_status)}</span>
+            </div>
+            <p>${escapeHTML(order.cliente_nome)} · ${escapeHTML(order.cliente_email)}</p>
+            <small>Pedido #${Number(order.id_ped)} · ${formatDate(order.data_pedido)} · ${formatCurrency(order.preco_u)}</small>
+            <small>${tracking}</small>
+            ${canShip ? `
+              <form class="admin-shipping-form" data-admin-shipping="${Number(order.id_ped)}">
+                <label>Código dos Correios<input name="codigo_rastreamento" maxlength="40" required /></label>
+                <button class="button dark" type="submit">Registrar envio</button>
+                <p class="feedback" data-shipping-feedback></p>
+              </form>` : ""}
+          </article>`;
+      }).join("")
+    : `<p class="empty-state">${emptyText}</p>`;
+
+  target.querySelectorAll("[data-admin-shipping]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = form.querySelector("button[type=submit]");
+      const feedback = form.querySelector("[data-shipping-feedback]");
+      button.disabled = true;
+      try {
+        await adminApi(`/pedidos/${form.dataset.adminShipping}/envio`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            codigo_rastreamento: form.elements.codigo_rastreamento.value.trim(),
+          }),
+        });
+        await loadAdminOrders();
+      } catch (error) {
+        feedback.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+async function loadAdminOrders() {
+  try {
+    const orders = await adminApi("/admin/pedidos");
+    const completed = orders.filter((order) => ["Entregue", "Cancelado"].includes(order.descricao_status));
+    const active = orders.filter((order) => !["Entregue", "Cancelado"].includes(order.descricao_status));
+    $("adminActiveOrderCount").textContent = `${active.length} ${active.length === 1 ? "pedido" : "pedidos"}`;
+    $("adminCompletedOrderCount").textContent = `${completed.length} ${completed.length === 1 ? "pedido" : "pedidos"}`;
+    renderAdminOrders($("adminActiveOrders"), active, "Nenhum pedido em andamento.");
+    renderAdminOrders($("adminCompletedOrders"), completed, "Nenhum pedido concluído.");
+  } catch (error) {
+    $("adminActiveOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+    $("adminCompletedOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
   }
 }
 
@@ -456,22 +600,9 @@ function logoutAdmin() {
   state.adminConversations = [];
   sessionStorage.removeItem("pinturas_admin_token");
   sessionStorage.removeItem("pinturas_admin_email");
-  $("adminLoginPanel").classList.remove("hidden");
-  $("adminWorkspace").classList.add("hidden");
-  $("adminLoginPassword").value = "";
-}
-
-async function loadAdminPanel() {
-  if (!state.adminToken) {
-    $("adminLoginPanel").classList.remove("hidden");
-    $("adminWorkspace").classList.add("hidden");
-    return;
-  }
-
-  $("adminLoginPanel").classList.add("hidden");
-  $("adminWorkspace").classList.remove("hidden");
-  $("adminIdentity").textContent = `Conectada como ${state.adminEmail || "administradora"}`;
-  await loadAdminConversations();
+  updateHeader();
+  renderCart();
+  navigate("home");
 }
 
 async function loadAdminConversations() {
@@ -534,35 +665,6 @@ document.querySelectorAll("[data-screen]").forEach((element) => {
 });
 
 $("loginButton").addEventListener("click", () => openAuth());
-$("adminLoginForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const button = $("adminLoginForm").querySelector("button[type=submit]");
-  button.disabled = true;
-  showFeedback("adminLoginFeedback", "");
-  try {
-    const response = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: $("adminLoginEmail").value.trim(),
-        senha: $("adminLoginPassword").value,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.erro || "Não foi possível entrar no painel.");
-    state.adminToken = data.token;
-    state.adminEmail = data.email;
-    sessionStorage.setItem("pinturas_admin_token", data.token);
-    sessionStorage.setItem("pinturas_admin_email", data.email);
-    $("adminLoginPassword").value = "";
-    await loadAdminPanel();
-  } catch (error) {
-    showFeedback("adminLoginFeedback", error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
-$("adminLogoutButton").addEventListener("click", logoutAdmin);
 $("adminRefreshButton").addEventListener("click", async () => {
   await loadAdminConversations();
   await loadAdminMessages();
@@ -609,6 +711,10 @@ $("adminMessageForm").addEventListener("submit", async (event) => {
   }
 });
 $("logoutButton").addEventListener("click", () => {
+  if (isAdmin()) {
+    logoutAdmin();
+    return;
+  }
   clearChatMessages();
   clearLocalSession();
   $("profileForm").reset();
