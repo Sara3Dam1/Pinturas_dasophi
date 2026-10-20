@@ -28,11 +28,11 @@ O checkout pede a confirmação de rua, número, bairro e CEP antes de abrir o M
 
 Se `JWT_SECRET` não estiver definido, o servidor gera um segredo aleatório e o mantém em `data/jwt-secret` (diretório ignorado pelo Git). Tokens de sessões existentes antes da primeira inicialização com essa proteção precisarão ser renovados com novo login.
 
-Para cadastrar uma obra pela API, faça login em `POST /api/admin/login` e envie o token retornado como `Authorization: Bearer <token>` em `POST /api/catalogo`. `preco_u` é em reais; `materiais` aceita IDs da tabela `Material`. O cadastro também aceita uma foto no campo multipart `foto`.
+Para cadastrar uma obra pela API, faça login em `POST /api/auth/login` usando o e-mail administrativo e envie o token retornado como `Authorization: Bearer <token>` em `POST /api/catalogo`. `POST /api/admin/login` continua disponível para integrações existentes. `preco_u` é em reais; `materiais` aceita IDs da tabela `Material`. O cadastro também aceita uma foto no campo multipart `foto`.
 
-O painel administrativo fica em **Administração**. Configure `ADMIN_EMAIL` e `ADMIN_PASSWORD_HASH` no ambiente do servidor. A senha deve ser armazenada como hash bcrypt, nunca no código ou no navegador. Para gerar o hash de uma senha, execute `node -e 'console.log(require("bcryptjs").hashSync(process.argv[1], 12))' 'sua-senha'` em um terminal seguro. Em desenvolvimento, o projeto carrega essas variáveis de um arquivo `.env` local, ignorado pelo Git. O login administrativo emite um token temporário de oito horas; ele permite cadastrar quadros com preço e foto e responder às mensagens dos clientes. Use HTTPS em produção.
+Configure `ADMIN_EMAIL` e `ADMIN_PASSWORD_HASH` no ambiente do servidor. A senha deve ser armazenada como hash bcrypt, nunca no código ou no navegador. Para gerar o hash de uma senha, execute `node -e 'console.log(require("bcryptjs").hashSync(process.argv[1], 12))' 'sua-senha'` em um terminal seguro. Em desenvolvimento, o projeto carrega essas variáveis de um arquivo `.env` local, ignorado pelo Git. A administradora entra pelo mesmo botão **Entrar** dos clientes, usando esse e-mail e senha. A sessão administrativa mostra a gestão de quadros em **Quadros originais**, as mensagens recebidas em **Chat de encomendas** e os pedidos separados em andamento e concluídos em **Carrinho**. O token administrativo dura oito horas. Use HTTPS em produção.
 
-No painel, o cadastro de quadros aceita título, tamanho, preço e uma foto opcional. As conversas incluem as mensagens recebidas pelo chat do cliente; as respostas da artista aparecem na mesma conversa.
+Na gestão de quadros, é possível cadastrar título, tamanho, preço e uma foto opcional, ou retirar uma obra da venda sem apagar o histórico de pedidos. As conversas incluem as mensagens recebidas pelo chat do cliente; as respostas da artista aparecem na mesma conversa.
 
 ```json
 {
@@ -56,8 +56,9 @@ Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/
 - `PATCH /api/pedidos/:id/confirmar-entrega` e `POST /api/pedidos/:id/feedback` (multipart: `avaliacao`, `comentario`, `foto`); a avaliação requer entrega confirmada
 - A criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
 - `POST /api/pagamentos/checkout` e `POST /api/pagamentos/webhook`
-- `POST /api/admin/login`, `GET /api/admin/conversas` e `GET/POST /api/admin/conversas/:id/mensagens` exigem login administrativo (exceto o login)
+- `POST /api/admin/login`, `GET /api/admin/pedidos`, `GET /api/admin/conversas` e `GET/POST /api/admin/conversas/:id/mensagens` exigem login administrativo (exceto o login)
 - `PATCH /api/pedidos/:id/envio` e `POST /api/catalogo` exigem autenticação administrativa
+- `DELETE /api/catalogo/:id` retira um quadro da venda sem remover pedidos antigos e exige autenticação administrativa
 - `POST /api/pedidos/:id/feedback`
 - `GET/POST /api/chat`
 - `GET /api/health`
