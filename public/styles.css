@@ -57,6 +57,62 @@
 .admin-orders {
   display: grid;
 }
+.admin-feedback-panel {
+  margin-top: 22px;
+  min-height: 0;
+}
+.admin-feedback-list {
+  display: grid;
+}
+.admin-feedback-item {
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  padding: 18px 0;
+}
+.admin-feedback-media {
+  align-items: center;
+  aspect-ratio: 6 / 5;
+  background: var(--cream);
+  color: var(--muted);
+  display: flex;
+  flex: 0 0 96px;
+  font-size: 12px;
+  justify-content: center;
+  overflow: hidden;
+}
+.admin-feedback-media img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+.admin-feedback-content {
+  flex: 1;
+  min-width: 0;
+}
+.admin-feedback-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.admin-feedback-heading strong,
+.admin-feedback-heading small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.admin-feedback-heading small,
+.admin-feedback-content > small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.admin-feedback-content p {
+  line-height: 1.6;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
 .admin-order-card {
   border-bottom: 1px solid var(--line);
   display: grid;

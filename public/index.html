@@ -65,7 +65,7 @@
           <div class="quick-grid">
             <button class="quick-card quick-blue" data-screen="store"><span class="quick-icon">◒</span><strong>Quadros originais</strong><small>Peças prontas, únicas e disponíveis para compra.</small><span class="quick-arrow">↗</span></button>
             <button class="quick-card quick-pink" data-screen="chat"><span class="quick-icon">✉</span><strong>Encomende com a Sophi</strong><small>Conte sua ideia e converse direto com a artista.</small><span class="quick-arrow">↗</span></button>
-            <button class="quick-card quick-yellow" data-screen="cart"><span class="quick-icon">□</span><strong>Seu carrinho</strong><small>Revise suas peças, pedidos e rastreios.</small><span class="quick-arrow">↗</span></button>
+            <button class="quick-card quick-yellow" data-screen="cart"><span class="quick-icon">□</span><strong id="homeCartShortcutTitle">Seu carrinho</strong><small id="homeCartShortcutDescription">Revise suas peças, pedidos e rastreios.</small><span class="quick-arrow">↗</span></button>
           </div>
         </div>
       </section>
@@ -119,6 +119,10 @@
             <section class="panel orders-panel"><div class="panel-title"><h3>Em andamento</h3><span id="adminActiveOrderCount" class="panel-count">0 pedidos</span></div><div id="adminActiveOrders" class="admin-orders"><p class="empty-state">Carregando pedidos...</p></div></section>
             <section class="panel orders-panel"><div class="panel-title"><h3>Concluídos</h3><span id="adminCompletedOrderCount" class="panel-count">0 pedidos</span></div><div id="adminCompletedOrders" class="admin-orders"><p class="empty-state">Nenhum pedido concluído.</p></div></section>
           </div>
+          <section class="panel admin-feedback-panel">
+            <div class="panel-title"><h3>Avaliações dos clientes</h3><span id="adminFeedbackCount" class="panel-count">0 avaliações</span></div>
+            <div id="adminFeedbackList" class="admin-feedback-list"><p class="empty-state">Carregando avaliações...</p></div>
+          </section>
         </div>
       </section>
 
@@ -137,7 +141,19 @@
 
     <dialog id="addressDialog" class="workflow-dialog"><button class="dialog-close" aria-label="Fechar">×</button><p class="eyebrow">Antes do pagamento</p><h2>Confirme seu<br /><em>endereço.</em></h2><p class="dialog-description">Este é o endereço que será salvo neste pedido e usado para a entrega.</p><form id="addressForm"><label>Rua<input id="checkoutStreet" required maxlength="160" autocomplete="street-address" /></label><label>Número da casa<input id="checkoutHouseNumber" required maxlength="30" autocomplete="address-line2" /></label><label>Bairro<input id="checkoutNeighborhood" required maxlength="100" /></label><label>CEP<input id="checkoutCep" required inputmode="numeric" pattern="[0-9]{5}-?[0-9]{3}" maxlength="9" autocomplete="postal-code" /></label><button class="button dark full" type="submit">Confirmar endereço e continuar</button><p id="addressFeedback" class="feedback" role="status"></p></form></dialog>
 
-    <dialog id="feedbackDialog" class="workflow-dialog"><button class="dialog-close" aria-label="Fechar">×</button><p class="eyebrow">Pedido recebido</p><h2>Conte como<br /><em>foi para você.</em></h2><form id="feedbackForm"><input id="feedbackOrderId" type="hidden" /><label>Avaliação<select id="feedbackRating" required><option value="">Selecione uma nota</option><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select></label><label>Sua opinião<textarea id="feedbackComment" required maxlength="1000" rows="4"></textarea></label><label>Foto do quadro<input id="feedbackPhoto" type="file" accept="image/*" required /></label><button class="button dark full" type="submit">Publicar avaliação</button><p id="feedbackFormStatus" class="feedback" role="status"></p></form></dialog>
+    <dialog id="feedbackDialog" class="workflow-dialog">
+      <button class="dialog-close" aria-label="Fechar">×</button>
+      <p class="eyebrow">Pedido recebido</p>
+      <h2>Conte como<br /><em>foi para você.</em></h2>
+      <form id="feedbackForm">
+        <input id="feedbackOrderId" type="hidden" />
+        <label>Avaliação<select id="feedbackRating" required><option value="">Selecione uma nota</option><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select></label>
+        <label>Sua opinião<textarea id="feedbackComment" required maxlength="1000" rows="4"></textarea></label>
+        <label>Foto do quadro (opcional)<input id="feedbackPhoto" type="file" accept="image/*" /></label>
+        <button class="button dark full" type="submit">Publicar avaliação</button>
+        <p id="feedbackFormStatus" class="feedback" role="status"></p>
+      </form>
+    </dialog>
 
     <dialog id="authDialog"><button class="dialog-close" aria-label="Fechar">×</button><div id="authContent"><p class="eyebrow">Bem-vinda(o)</p><h2 id="authTitle">Entrar na sua conta</h2><form id="authForm" autocomplete="off"><label id="nameField" class="hidden">Nome<input id="name" type="text" autocomplete="off" /></label><label>E-mail<input id="email" type="email" autocomplete="off" required /></label><label>Senha<div class="password-field"><input id="password" type="password" minlength="6" autocomplete="new-password" required /><button type="button" id="togglePassword" title="Mostrar senha">◉</button></div></label><button class="button dark full" type="submit">Entrar <span>↗</span></button></form><button id="recoverLink" class="dialog-link">Esqueci minha senha</button><p id="authSwitch" class="switch-text">Ainda não tem conta? <button>Cadastre-se</button></p><p id="authFeedback" class="feedback"></p></div></dialog>
     <script src="/app.js"></script>

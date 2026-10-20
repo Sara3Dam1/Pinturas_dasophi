@@ -92,6 +92,7 @@ const adminApi = async (url, options = {}) => {
 function navigate(screen) {
   if (!$("screen-" + screen)) screen = "home";
   if (isAdmin() && screen === "profile") screen = "store";
+  if (isAdmin() && screen === "help") screen = "home";
   updateHeader();
   document.querySelectorAll(".screen").forEach((element) => {
     element.classList.toggle("active", element.id === `screen-${screen}`);
@@ -148,6 +149,13 @@ function updateHeader() {
   const cartBadge = $("cartBadge");
   cartNavigation.textContent = administrator ? "Pedidos " : "Carrinho ";
   cartNavigation.append(cartBadge);
+  $("homeCartShortcutTitle").textContent = administrator ? "Pedidos" : "Seu carrinho";
+  $("homeCartShortcutDescription").textContent = administrator
+    ? "Acompanhe pedidos em andamento e concluídos."
+    : "Revise suas peças, pedidos e rastreios.";
+  document.querySelectorAll('[data-screen="help"]').forEach((element) => {
+    element.classList.toggle("hidden", administrator);
+  });
   const initial = state.client?.nome?.[0]?.toUpperCase() || "S";
   $("profileButton").textContent = initial;
   $("profileInitial").textContent = initial;
@@ -495,9 +503,35 @@ async function loadAdminOrders() {
     $("adminCompletedOrderCount").textContent = `${completed.length} ${completed.length === 1 ? "pedido" : "pedidos"}`;
     renderAdminOrders($("adminActiveOrders"), active, "Nenhum pedido em andamento.");
     renderAdminOrders($("adminCompletedOrders"), completed, "Nenhum pedido concluído.");
+    await loadAdminFeedbacks();
   } catch (error) {
     $("adminActiveOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
     $("adminCompletedOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+  }
+}
+
+async function loadAdminFeedbacks() {
+  try {
+    const feedbacks = await adminApi("/admin/feedbacks");
+    $("adminFeedbackCount").textContent = `${feedbacks.length} ${feedbacks.length === 1 ? "avaliação" : "avaliações"}`;
+    $("adminFeedbackList").innerHTML = feedbacks.length
+      ? feedbacks.map((feedback) => `
+          <article class="admin-feedback-item">
+            <div class="admin-feedback-media">${feedback.foto
+              ? `<img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />`
+              : '<span>Sem foto</span>'}</div>
+            <div class="admin-feedback-content">
+              <div class="admin-feedback-heading">
+                <div><strong>${escapeHTML(feedback.titulo)}</strong><small>${escapeHTML(feedback.cliente_nome)} · ${escapeHTML(feedback.cliente_email)}</small></div>
+                <span class="review-rating" aria-label="${Number(feedback.avaliacao)} de 5 estrelas">${"★".repeat(Number(feedback.avaliacao))}</span>
+              </div>
+              <p>${escapeHTML(feedback.comentario || "Sem comentário.")}</p>
+              <small>Pedido #${Number(feedback.id_ped)} · ${formatDate(feedback.data_pedido)}</small>
+            </div>
+          </article>`).join("")
+      : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
+  } catch (error) {
+    $("adminFeedbackList").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
   }
 }
 
@@ -539,7 +573,8 @@ $("feedbackForm").addEventListener("submit", async (event) => {
   const form = new FormData();
   form.append("avaliacao", $("feedbackRating").value);
   form.append("comentario", $("feedbackComment").value.trim());
-  form.append("foto", $("feedbackPhoto").files[0]);
+  const photo = $("feedbackPhoto").files[0];
+  if (photo) form.append("foto", photo);
 
   try {
     const response = await fetch(`/api/pedidos/${encodeURIComponent($("feedbackOrderId").value)}/feedback`, {
