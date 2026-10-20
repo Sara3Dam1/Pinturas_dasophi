@@ -126,6 +126,15 @@ db.exec(`
     texto TEXT NOT NULL,
     data_envio TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS Galeria (
+    id_obra INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT NOT NULL,
+    tamanho TEXT,
+    descricao TEXT,
+    foto TEXT NOT NULL,
+    data_publicacao TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 function seed() {
