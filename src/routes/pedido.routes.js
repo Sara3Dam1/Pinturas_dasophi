@@ -97,9 +97,9 @@ router.post("/:id/feedback", requireAuth, upload.single("foto"), (req, res) => {
     if (req.file) fs.unlinkSync(req.file.path);
     return res.status(400).json({ erro: "A avaliacao deve ser de 1 a 5." });
   }
-  if (!comentario || comentario.length > 1000 || !req.file || !req.file.mimetype.startsWith("image/")) {
+  if (!comentario || comentario.length > 1000 || (req.file && !req.file.mimetype.startsWith("image/"))) {
     if (req.file) fs.unlinkSync(req.file.path);
-    return res.status(400).json({ erro: "Envie uma foto e uma opinião de até 1000 caracteres." });
+    return res.status(400).json({ erro: "Envie uma opinião de até 1000 caracteres e, se desejar, uma foto." });
   }
 
   db.prepare(
@@ -112,7 +112,13 @@ router.post("/:id/feedback", requireAuth, upload.single("foto"), (req, res) => {
       foto = excluded.foto,
       data_pedido = CURRENT_TIMESTAMP
   `,
-  ).run(req.user.id, req.params.id, avaliacao, comentario, `/uploads/${req.file.filename}`);
+  ).run(
+    req.user.id,
+    req.params.id,
+    avaliacao,
+    comentario,
+    req.file ? `/uploads/${req.file.filename}` : null,
+  );
 
   return res.status(201).json({ mensagem: "Feedback registrado." });
 });

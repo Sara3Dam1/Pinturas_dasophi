@@ -38,6 +38,22 @@ router.get("/pedidos", requireAdmin, (_req, res) => {
   return res.json(orders);
 });
 
+router.get("/feedbacks", requireAdmin, (_req, res) => {
+  const feedbacks = db.prepare(`
+    SELECT f.id_ped, f.avaliacao, f.comentario, f.foto, f.data_pedido,
+      q.titulo, c.nome AS cliente_nome, c.email AS cliente_email
+    FROM Feedback f
+    JOIN Pedido p ON p.id_ped = f.id_ped
+    JOIN Quadro q ON q.id_quadro = p.id_qua
+    JOIN Clientes c ON c.Id_Cli = p.id_cli
+    JOIN Status s ON s.id_status = p.id_status
+    WHERE s.descricao_status = 'Entregue'
+      AND p.data_entrega_confirmada IS NOT NULL
+    ORDER BY f.data_pedido DESC, f.id_ped DESC
+  `).all();
+  return res.json(feedbacks);
+});
+
 router.get("/conversas", requireAdmin, (_req, res) => {
   const conversations = db.prepare(`
     WITH latest AS (
