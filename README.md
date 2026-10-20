@@ -13,18 +13,20 @@ Acesse `http://localhost:3000`.
 
 ## Pagamentos e envios
 
-O checkout usa o Mercado Pago para processar Pix ou cartão sem armazenar dados de cartão. Para habilitar cobranças reais, configure as credenciais da loja e uma URL pública acessível pelo Mercado Pago:
+O checkout usa Stripe Checkout para processar Pix ou cartão sem armazenar dados de cartão. A API Stripe não exige mensalidade, mas cobra tarifas por transação; consulte os valores atuais no painel Stripe. Para habilitar cobranças reais, crie uma conta Stripe, configure Pix se disponível para sua conta brasileira e informe a chave secreta, o segredo do webhook e a URL pública do site:
 
 ```sh
-export MERCADO_PAGO_ACCESS_TOKEN=seu_access_token
-export MERCADO_PAGO_WEBHOOK_SECRET=segredo_configurado_no_webhook
+export STRIPE_SECRET_KEY=sk_test_sua_chave_secreta
+export STRIPE_WEBHOOK_SECRET=whsec_segredo_do_endpoint
 export APP_URL=https://seu-dominio-publico.com
 npm start
 ```
 
-Cadastre `/api/pagamentos/webhook` como URL de notificações de pagamentos no painel do Mercado Pago. Sem essas variáveis, o checkout e as operações administrativas ficam desabilitados; não há cobrança simulada.
+Para testes locais sem cobrança, defina `PAYMENT_MODE=demo` no `.env`. Esse modo cria pedidos como aprovados e permite testar envio, rastreio, confirmação de entrega e feedback; nenhum pagamento é processado. Ele é desativado automaticamente quando `NODE_ENV=production`.
 
-O checkout pede a confirmação de rua, número, bairro e CEP antes de abrir o Mercado Pago e salva uma cópia do endereço em cada pedido. Depois de marcar o pedido como enviado, o cliente confirma o recebimento; só então pode publicar nota, opinião e foto na galeria pública. As fotos aceitas são JPEG, PNG, WebP, GIF ou AVIF, até 5 MB.
+Cadastre `https://seu-dominio-publico.com/api/pagamentos/webhook` no painel Stripe para os eventos `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` e `checkout.session.expired`; use o segredo de assinatura fornecido pelo Stripe como `STRIPE_WEBHOOK_SECRET`. Use chaves `sk_test_` para testes e troque pelas chaves de produção somente após validar a integração. Sem essas variáveis, o checkout fica desabilitado; não há cobrança simulada.
+
+O checkout pede a confirmação de rua, número, bairro e CEP antes de abrir o Stripe e salva uma cópia do endereço em cada pedido. Depois de marcar o pedido como enviado, o cliente confirma o recebimento; só então pode publicar nota, opinião e foto opcional na galeria pública. As fotos aceitas são JPEG, PNG, WebP, GIF ou AVIF, até 5 MB.
 
 Se `JWT_SECRET` não estiver definido, o servidor gera um segredo aleatório e o mantém em `data/jwt-secret` (diretório ignorado pelo Git). Tokens de sessões existentes antes da primeira inicialização com essa proteção precisarão ser renovados com novo login.
 
