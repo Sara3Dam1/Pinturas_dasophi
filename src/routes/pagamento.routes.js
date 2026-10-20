@@ -45,7 +45,7 @@ router.post("/checkout", requireAuth, async (req, res) => {
   const placeholders = itemIds.map(() => "?").join(",");
   const items = db.prepare(`
     SELECT id_quadro, titulo, tamanho, preco_u
-    FROM Quadro WHERE id_quadro IN (${placeholders})
+    FROM Quadro WHERE id_quadro IN (${placeholders}) AND disponivel = 1
   `).all(...itemIds);
   if (items.length !== itemIds.length) {
     return res.status(404).json({ erro: "Um ou mais quadros nao foram encontrados." });

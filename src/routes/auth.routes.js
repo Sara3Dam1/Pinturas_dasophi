@@ -2,7 +2,12 @@ const bcrypt = require("bcryptjs");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
-const { jwtSecret } = require("../config");
+const { adminEmail, jwtSecret } = require("../config");
+const {
+  createAdminToken,
+  isAdminConfigured,
+  verifyAdminCredentials,
+} = require("../utilidade/admin");
 const { publicClient } = require("../utilidade/client");
 
 const router = express.Router();
@@ -23,6 +28,10 @@ router.post("/register", (req, res) => {
     return res.status(400).json({
       erro: "Nome, e-mail e senha com no minimo 6 caracteres sao obrigatorios.",
     });
+  }
+
+  if (String(email).trim().toLowerCase() === adminEmail) {
+    return res.status(409).json({ erro: "Este e-mail esta reservado para a administracao." });
   }
 
   try {
@@ -62,12 +71,28 @@ router.post("/register", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
-  const email = String(req.body.email || "").toLowerCase();
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.senha || "");
+
+  if (email === adminEmail) {
+    if (!isAdminConfigured()) {
+      return res.status(503).json({ erro: "Acesso administrativo nao configurado." });
+    }
+    if (!verifyAdminCredentials(email, password)) {
+      return res.status(401).json({ erro: "E-mail ou senha invalidos." });
+    }
+    return res.json({
+      role: "admin",
+      email,
+      token: createAdminToken(),
+    });
+  }
+
   const client = db
     .prepare("SELECT * FROM Clientes WHERE email = ?")
     .get(email);
 
-  if (!client || !bcrypt.compareSync(req.body.senha || "", client.senha)) {
+  if (!client || !bcrypt.compareSync(password, client.senha)) {
     return res.status(401).json({ erro: "E-mail ou senha invalidos." });
   }
 

@@ -21,6 +21,7 @@ router.get("/", (_req, res) => {
     LEFT JOIN Material m ON m.Id_mat = mq.id_mat
     LEFT JOIN Material legacy_material ON legacy_material.Id_mat = q.id_mat
     LEFT JOIN Artista a ON a.id_artista = q.id_artista
+    WHERE q.disponivel = 1
     GROUP BY q.id_quadro
     ORDER BY q.data_criacao DESC
   `,
@@ -74,6 +75,22 @@ router.post("/", requireAdmin, upload.single("foto"), (req, res) => {
     if (req.file) fs.unlinkSync(req.file.path);
     return res.status(500).json({ erro: "Nao foi possivel cadastrar o quadro." });
   }
+});
+
+router.delete("/:id", requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return res.status(400).json({ erro: "Quadro invalido." });
+  }
+
+  const result = db.prepare(
+    "UPDATE Quadro SET disponivel = 0 WHERE id_quadro = ? AND disponivel = 1",
+  ).run(id);
+  if (!result.changes) {
+    return res.status(404).json({ erro: "Quadro nao encontrado ou ja retirado da loja." });
+  }
+
+  return res.json({ mensagem: "Quadro retirado da loja." });
 });
 
 module.exports = router;

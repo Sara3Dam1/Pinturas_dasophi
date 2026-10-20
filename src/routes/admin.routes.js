@@ -1,28 +1,41 @@
-const bcrypt = require("bcryptjs");
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const db = require("../db");
-const { adminEmail, adminPasswordHash, jwtSecret } = require("../config");
 const { requireAdmin } = require("../middleware/admin");
+const {
+  createAdminToken,
+  isAdminConfigured,
+  verifyAdminCredentials,
+} = require("../utilidade/admin");
 
 const router = express.Router();
-const validBcryptHash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
 router.post("/login", (req, res) => {
-  if (!adminEmail || !validBcryptHash.test(adminPasswordHash || "")) {
+  if (!isAdminConfigured()) {
     return res.status(503).json({ erro: "Acesso administrativo nao configurado." });
   }
 
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.senha || "");
-  if (email !== adminEmail || !bcrypt.compareSync(password, adminPasswordHash)) {
+  if (!verifyAdminCredentials(email, password)) {
     return res.status(401).json({ erro: "E-mail ou senha invalidos." });
   }
 
-  const token = jwt.sign({ role: "admin", email: adminEmail }, jwtSecret, {
-    expiresIn: "8h",
-  });
-  return res.json({ token, email: adminEmail });
+  return res.json({ token: createAdminToken(), email });
+});
+
+router.get("/pedidos", requireAdmin, (_req, res) => {
+  const orders = db.prepare(`
+    SELECT p.id_ped, p.data_pedido, p.data_envio, p.previsao_entrega,
+      p.codigo_rastreamento, p.data_entrega_confirmada,
+      q.titulo, q.tamanho, q.preco_u, s.descricao_status,
+      c.nome AS cliente_nome, c.email AS cliente_email
+    FROM Pedido p
+    JOIN Quadro q ON q.id_quadro = p.id_qua
+    JOIN Status s ON s.id_status = p.id_status
+    JOIN Clientes c ON c.Id_Cli = p.id_cli
+    ORDER BY p.data_pedido DESC, p.id_ped DESC
+  `).all();
+  return res.json(orders);
 });
 
 router.get("/conversas", requireAdmin, (_req, res) => {
