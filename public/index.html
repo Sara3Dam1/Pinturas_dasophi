@@ -22,6 +22,7 @@
       <nav class="main-nav" aria-label="Navegação principal">
         <button data-screen="home">Início</button>
         <button data-screen="store">Quadros originais</button>
+        <button data-screen="gallery">Galeria</button>
         <button data-screen="chat">Chat de encomendas</button>
         <button data-screen="cart">Carrinho <span id="cartBadge">0</span></button>
         <button data-screen="help">Ajuda</button>
@@ -64,6 +65,7 @@
           </div>
           <div class="quick-grid">
             <button class="quick-card quick-blue" data-screen="store"><span class="quick-icon">◒</span><strong>Quadros originais</strong><small>Peças prontas, únicas e disponíveis para compra.</small><span class="quick-arrow">↗</span></button>
+            <button class="quick-card quick-yellow" data-screen="gallery"><span class="quick-icon">▧</span><strong>Galeria</strong><small>Conheça outras obras do ateliê, apenas para visualização.</small><span class="quick-arrow">↗</span></button>
             <button class="quick-card quick-pink" data-screen="chat"><span class="quick-icon">✉</span><strong>Encomende com a Sophi</strong><small>Conte sua ideia e converse direto com a artista.</small><span class="quick-arrow">↗</span></button>
             <button class="quick-card quick-yellow" data-screen="cart"><span class="quick-icon">□</span><strong id="homeCartShortcutTitle">Seu carrinho</strong><small id="homeCartShortcutDescription">Revise suas peças, pedidos e rastreios.</small><span class="quick-arrow">↗</span></button>
           </div>
@@ -87,6 +89,25 @@
           </form>
         </div>
         <div id="catalogGrid" class="catalog-grid"></div>
+      </section>
+
+      <section id="screen-gallery" class="screen section gallery-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">Obras do ateliê</p><h2>Galeria <em>de pinturas.</em></h2></div>
+          <p class="section-note">Obras para apreciar. Os quadros desta galeria não estão à venda.</p>
+        </div>
+        <div id="adminGalleryPanel" class="panel admin-products hidden">
+          <div class="panel-title"><h3>Publicar obra na galeria</h3></div>
+          <form id="adminGalleryForm">
+            <label>Título<input id="adminGalleryTitle" name="titulo" maxlength="160" required /></label>
+            <label>Tamanho<input id="adminGallerySize" name="tamanho" maxlength="100" /></label>
+            <label class="gallery-description-field">Descrição<textarea id="adminGalleryDescription" name="descricao" maxlength="1000" rows="3"></textarea></label>
+            <label>Foto da obra<input id="adminGalleryPhoto" name="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" required /></label>
+            <button class="button dark" type="submit">Publicar na galeria</button>
+            <p id="adminGalleryFeedback" class="feedback" role="status"></p>
+          </form>
+        </div>
+        <div id="galleryGrid" class="gallery-grid"><p class="empty-state">Carregando obras...</p></div>
       </section>
 
       <section id="screen-chat" class="screen section workspace-section">
@@ -139,6 +160,16 @@
 
     <footer><span>© 2026 Pinturas da Sophi</span><span>arte autoral, feita para você</span><a href="https://pinturasdasophi.com" target="_blank" rel="noreferrer">Site institucional ↗</a></footer>
 
+    <dialog id="artworkPreviewDialog" class="artwork-dialog" aria-labelledby="artworkPreviewTitle">
+      <button class="dialog-close" aria-label="Fechar visualização">×</button>
+      <div class="artwork-preview-image-wrap"><img id="artworkPreviewImage" alt="" /></div>
+      <div class="artwork-preview-details">
+        <p class="eyebrow">Detalhes da obra</p>
+        <h2 id="artworkPreviewTitle"></h2>
+        <p id="artworkPreviewDescription" class="artwork-preview-description"></p>
+        <strong id="artworkPreviewPrice" class="art-price hidden"></strong>
+      </div>
+    </dialog>
     <dialog id="addressDialog" class="workflow-dialog"><button class="dialog-close" aria-label="Fechar">×</button><p class="eyebrow">Antes do pagamento</p><h2>Confirme seu<br /><em>endereço.</em></h2><p class="dialog-description">Este é o endereço que será salvo neste pedido e usado para a entrega.</p><form id="addressForm"><label>Rua<input id="checkoutStreet" required maxlength="160" autocomplete="street-address" /></label><label>Número da casa<input id="checkoutHouseNumber" required maxlength="30" autocomplete="address-line2" /></label><label>Bairro<input id="checkoutNeighborhood" required maxlength="100" /></label><label>CEP<input id="checkoutCep" required inputmode="numeric" pattern="[0-9]{5}-?[0-9]{3}" maxlength="9" autocomplete="postal-code" /></label><button class="button dark full" type="submit">Confirmar endereço e continuar</button><p id="addressFeedback" class="feedback" role="status"></p></form></dialog>
 
     <dialog id="feedbackDialog" class="workflow-dialog">

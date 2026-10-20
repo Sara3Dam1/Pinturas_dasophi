@@ -103,6 +103,7 @@ function navigate(screen) {
   history.replaceState(null, "", `#${screen}`);
 
   if (screen === "store") loadCatalog();
+  if (screen === "gallery") loadGallery();
   if (screen === "cart") {
     if (isAdmin()) loadAdminOrders();
     else {
@@ -128,6 +129,7 @@ function updateHeader() {
   $("logoutButton").textContent = administrator ? "Sair do ateliê" : "Sair";
   $("profileButton").classList.toggle("hidden", !state.token || administrator);
   $("adminProductPanel").classList.toggle("hidden", !administrator);
+  $("adminGalleryPanel").classList.toggle("hidden", !administrator);
   $("customerChatLayout").classList.toggle("hidden", administrator);
   $("adminInboxPanel").classList.toggle("hidden", !administrator);
   $("customerCartLayout").classList.toggle("hidden", administrator);
@@ -252,6 +254,16 @@ function escapeHTML(value) {
   })[character]);
 }
 
+function openArtworkPreview(image, title, description, price = "") {
+  $("artworkPreviewImage").src = image;
+  $("artworkPreviewImage").alt = title;
+  $("artworkPreviewTitle").textContent = title;
+  $("artworkPreviewDescription").textContent = description;
+  $("artworkPreviewPrice").textContent = price;
+  $("artworkPreviewPrice").classList.toggle("hidden", !price);
+  $("artworkPreviewDialog").showModal();
+}
+
 async function loadCatalog() {
   const catalog = await api("/catalogo");
   $("catalogGrid").innerHTML = catalog
@@ -259,9 +271,11 @@ async function loadCatalog() {
       (item, index) => `
         <article class="art-card">
           <div class="art-image ${["one", "two", "three"][index % 3]}">
-            ${item.foto
-              ? `<img src="${escapeHTML(item.foto)}" alt="${escapeHTML(item.titulo)}" loading="lazy" />`
-              : `<div class="art-frame">${escapeHTML(item.titulo.split(" ")[0])}</div>`}
+            <button type="button" class="artwork-preview-trigger" data-preview-image="${escapeHTML(item.foto || "")}" data-preview-title="${escapeHTML(item.titulo)}" data-preview-description="${escapeHTML(`${item.tamanho || "Tamanho sob consulta"} · ${item.des_material || "tela"}`)}" data-preview-price="${escapeHTML(Number(item.preco_u) > 0 ? formatCurrency(item.preco_u) : "Preço sob consulta")}" aria-label="Ampliar ${escapeHTML(item.titulo)}">
+              ${item.foto
+                ? `<img src="${escapeHTML(item.foto)}" alt="" loading="lazy" />`
+                : `<div class="art-frame">${escapeHTML(item.titulo.split(" ")[0])}</div>`}
+            </button>
           </div>
           <div class="art-card-info">
             <div>
@@ -277,6 +291,7 @@ async function loadCatalog() {
     )
     .join("");
 
+  bindArtworkPreviewTriggers($("catalogGrid"));
   document.querySelectorAll("[data-add-cart]").forEach((button) => {
     button.addEventListener("click", () => addToCart(button.dataset.addCart, catalog));
   });
@@ -291,6 +306,63 @@ async function loadCatalog() {
         alert(error.message);
         button.disabled = false;
       }
+    });
+  });
+}
+
+async function loadGallery() {
+  const target = $("galleryGrid");
+  try {
+    const works = await api("/galeria");
+    target.innerHTML = works.length
+      ? works.map((work) => `
+          <article class="gallery-card">
+              <button type="button" class="gallery-card-image-trigger artwork-preview-trigger" data-preview-image="${escapeHTML(work.foto)}" data-preview-title="${escapeHTML(work.titulo)}" data-preview-description="${escapeHTML([work.tamanho, work.descricao].filter(Boolean).join(" · ") || "Obra disponível apenas para visualização.")}" aria-label="Ampliar ${escapeHTML(work.titulo)}">
+                <img src="${escapeHTML(work.foto)}" alt="" loading="lazy" />
+              </button>
+            <div class="gallery-card-info">
+              <div>
+                <h3>${escapeHTML(work.titulo)}</h3>
+                ${work.tamanho ? `<small>${escapeHTML(work.tamanho)}</small>` : ""}
+                ${work.descricao ? `<p>${escapeHTML(work.descricao)}</p>` : ""}
+              </div>
+              ${isAdmin()
+                ? `<button class="remove-button" data-remove-gallery-work="${Number(work.id_obra)}">Remover</button>`
+                : ""}
+            </div>
+          </article>`).join("")
+      : '<p class="empty-state">Ainda não há obras nesta galeria.</p>';
+
+    bindArtworkPreviewTriggers(target);
+    target.querySelectorAll("[data-remove-gallery-work]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!confirm("Remover esta obra da galeria?")) return;
+        button.disabled = true;
+        try {
+          await adminApi(`/galeria/${button.dataset.removeGalleryWork}`, { method: "DELETE" });
+          await loadGallery();
+        } catch (error) {
+          alert(error.message);
+          button.disabled = false;
+        }
+      });
+    });
+  } catch (error) {
+    target.innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+  }
+}
+
+function bindArtworkPreviewTriggers(target) {
+  target.querySelectorAll(".artwork-preview-trigger").forEach((button) => {
+    button.addEventListener("click", () => {
+      const image = button.dataset.previewImage || button.querySelector("img")?.src;
+      if (!image) return;
+      openArtworkPreview(
+        image,
+        button.dataset.previewTitle,
+        button.dataset.previewDescription,
+        button.dataset.previewPrice,
+      );
     });
   });
 }
@@ -771,6 +843,27 @@ $("adminProductForm").addEventListener("submit", async (event) => {
     button.disabled = false;
   }
 });
+$("adminGalleryForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("adminGalleryForm").querySelector("button[type=submit]");
+  button.disabled = true;
+  showFeedback("adminGalleryFeedback", "");
+  try {
+    const form = new FormData();
+    form.append("titulo", $("adminGalleryTitle").value.trim());
+    form.append("tamanho", $("adminGallerySize").value.trim());
+    form.append("descricao", $("adminGalleryDescription").value.trim());
+    form.append("foto", $("adminGalleryPhoto").files[0]);
+    await adminApi("/galeria", { method: "POST", body: form });
+    $("adminGalleryForm").reset();
+    showFeedback("adminGalleryFeedback", "Obra publicada na galeria.");
+    await loadGallery();
+  } catch (error) {
+    showFeedback("adminGalleryFeedback", error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
 $("adminMessageForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.adminClientId) return;
@@ -927,6 +1020,7 @@ restoreCart();
 updateHeader();
 renderCart();
 loadCatalog();
+loadGallery();
 loadOrders();
 const [initialScreen, paymentReturn] = location.hash.replace("#", "").split("?");
 navigate(initialScreen || "home");

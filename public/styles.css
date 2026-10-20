@@ -49,6 +49,19 @@
   grid-column: 1 / -1;
   margin: 0;
 }
+.gallery-description-field {
+  grid-column: 1 / -1;
+}
+.gallery-description-field textarea {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  margin-top: 7px;
+  padding: 12px;
+  resize: vertical;
+  width: 100%;
+}
 .admin-order-groups {
   display: grid;
   gap: 22px;
@@ -519,6 +532,28 @@ h2 {
   inset: 0;
   width: 100%;
 }
+.art-image .artwork-preview-trigger {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: zoom-in;
+  display: flex;
+  height: 100%;
+  inset: 0;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  width: 100%;
+}
+.artwork-preview-trigger:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -3px;
+}
+.artwork-preview-trigger img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
 .art-image.one {
   background: #c5e1ee;
 }
@@ -572,6 +607,60 @@ h2 {
   display: block;
   font-size: 15px;
   margin-top: 8px;
+}
+.gallery-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.gallery-card {
+  background: rgba(255, 255, 255, 0.92);
+  min-width: 0;
+  padding: 10px 10px 18px;
+}
+.gallery-card-image-trigger {
+  aspect-ratio: 4 / 3;
+  background: var(--cream);
+  border: 0;
+  cursor: zoom-in;
+  display: block;
+  padding: 0;
+  width: 100%;
+}
+.gallery-card-image-trigger img {
+  aspect-ratio: 4 / 3;
+  background: var(--cream);
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+.gallery-card-info {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 15px 8px 0;
+}
+.gallery-card-info > div {
+  min-width: 0;
+}
+.gallery-card h3 {
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 5px;
+  overflow-wrap: anywhere;
+}
+.gallery-card small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.gallery-card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
 }
 .order-button {
   background: transparent;
@@ -867,6 +956,7 @@ input:focus {
     font-size: 40px;
   }
   .catalog-grid,
+  .gallery-grid,
   .workspace-grid,
   .help-band {
     grid-template-columns: 1fr;
@@ -887,6 +977,9 @@ input:focus {
     height: 360px;
   }
   .catalog-grid {
+    gap: 16px;
+  }
+  .gallery-grid {
     gap: 16px;
   }
   .art-image {
@@ -965,7 +1058,7 @@ input:focus {
 .quick-grid {
   display: grid;
   gap: 18px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .quick-card {
@@ -1248,6 +1341,55 @@ input:focus {
 .workflow-dialog {
   max-width: 520px;
 }
+.artwork-dialog {
+  align-items: center;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.8fr);
+  max-height: calc(100vh - 32px);
+  max-width: none;
+  overflow: auto;
+  padding: 32px;
+  position: relative;
+  width: min(1100px, calc(100% - 32px));
+}
+.artwork-dialog[open] {
+  display: grid;
+}
+.artwork-preview-image-wrap {
+  align-items: center;
+  background: var(--cream);
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+}
+.artwork-preview-image-wrap img {
+  display: block;
+  max-height: calc(100vh - 96px);
+  max-width: 100%;
+  object-fit: contain;
+}
+.artwork-preview-details {
+  min-width: 0;
+  padding: 24px 12px 24px 0;
+}
+.artwork-preview-details .eyebrow {
+  margin-bottom: 12px;
+}
+.artwork-preview-details h2 {
+  font-size: 36px;
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.artwork-preview-description {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.artwork-preview-details .art-price {
+  margin-top: 20px;
+}
 .workflow-dialog h2 {
   font-size: 36px;
   margin-bottom: 12px;
@@ -1281,6 +1423,20 @@ input:focus {
 }
 
 @media (max-width: 520px) {
+  .artwork-dialog {
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 18px;
+  }
+  .artwork-preview-image-wrap img {
+    max-height: 58vh;
+  }
+  .artwork-preview-details {
+    padding: 0;
+  }
+  .artwork-preview-details h2 {
+    font-size: 30px;
+  }
   .hero-actions,
   .cart-footer,
   .tracking-form {
@@ -1402,6 +1558,10 @@ input:focus {
 }
 
 @media (max-width: 1000px) {
+  .quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .main-nav {
     gap: 12px;
   }
