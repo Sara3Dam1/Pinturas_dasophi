@@ -32,8 +32,11 @@ module.exports = {
   adminToken: process.env.ADMIN_TOKEN,
   adminEmail: process.env.ADMIN_EMAIL?.trim().toLowerCase(),
   adminPasswordHash: process.env.ADMIN_PASSWORD_HASH,
-  mercadoPagoAccessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN,
-  mercadoPagoWebhookSecret: process.env.MERCADO_PAGO_WEBHOOK_SECRET,
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  paymentMode: process.env.PAYMENT_MODE === "demo" && process.env.NODE_ENV !== "production"
+    ? "demo"
+    : "stripe",
   appUrl: process.env.APP_URL,
   rootDir,
   publicDir: path.join(rootDir, "public"),
