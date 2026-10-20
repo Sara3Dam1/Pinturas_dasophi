@@ -36,6 +36,8 @@ Configure `ADMIN_EMAIL` e `ADMIN_PASSWORD_HASH` no ambiente do servidor. A senha
 
 Na gestão de quadros, é possível cadastrar título, tamanho, preço e uma foto opcional, ou retirar uma obra da venda sem apagar o histórico de pedidos. As conversas incluem as mensagens recebidas pelo chat do cliente; as respostas da artista aparecem na mesma conversa.
 
+A tela **Galeria** exibe obras somente para visualização, separadas dos quadros à venda. Apenas o acesso administrativo pode publicar ou remover obras; cada publicação exige título e foto, e não possui preço nem opção de compra.
+
 ```json
 {
 	"titulo": "Jardim ao entardecer",
@@ -54,6 +56,7 @@ Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/
 - `POST /api/auth/register`, `POST /api/auth/login` e `POST /api/auth/recuperar`
 - `GET/PATCH /api/perfil` e `POST /api/perfil/foto`
 - `GET /api/catalogo`
+- `GET /api/galeria` (visualização pública), `POST /api/galeria` e `DELETE /api/galeria/:id` (exigem autenticação administrativa)
 - `GET /api/pedidos`, `GET /api/pedidos/rastrear/:codigo` e `GET /api/pedidos/feedbacks`
 - `PATCH /api/pedidos/:id/confirmar-entrega` e `POST /api/pedidos/:id/feedback` (multipart: `avaliacao`, `comentario`, `foto`); a avaliação requer entrega confirmada
 - A criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
