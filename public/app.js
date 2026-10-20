@@ -369,10 +369,18 @@ async function startCheckout(address) {
     sessionStorage.setItem("pinturas_checkout_cart", JSON.stringify({
       clientId: state.client.Id_Cli,
       items: state.cart,
+      reference: checkout.referencia,
     }));
+    if (checkout.modo_demo) {
+      await finalizeApprovedPayment(checkout.referencia);
+      return;
+    }
     window.location.assign(checkout.checkout_url);
   } catch (error) {
     showFeedback("checkoutFeedback", error.message);
+    if (attempt < 60) {
+      setTimeout(() => finalizeApprovedPayment(reference, attempt + 1), 5000);
+    }
   }
 }
 
@@ -433,16 +441,13 @@ async function loadOrders() {
   }
   if (!state.token) {
     $("ordersList").textContent = "Entre para visualizar seus pedidos.";
-    $("chatOrdersList").textContent = "Entre para consultar pedidos e avaliações.";
     return;
   }
   try {
     const orders = await api("/pedidos");
     renderOrders($("ordersList"), orders, "Você ainda não tem pedidos.<br />Finalize uma compra para começar.");
-    renderOrders($("chatOrdersList"), orders, "Seus pedidos e avaliações aparecerão aqui.");
   } catch (error) {
     $("ordersList").textContent = error.message;
-    $("chatOrdersList").textContent = error.message;
   }
 }
 
@@ -540,9 +545,9 @@ async function loadPublicFeedbacks() {
     const feedbacks = await api("/pedidos/feedbacks");
     $("feedbackGallery").innerHTML = feedbacks.length
       ? feedbacks.map((feedback) => `
-          <article class="review-item">
-            <img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />
-            <div><strong>${escapeHTML(feedback.titulo)}</strong><span class="review-rating" aria-label="${Number(feedback.avaliacao)} de 5 estrelas">${"★".repeat(Number(feedback.avaliacao))}</span><p>${escapeHTML(feedback.comentario)}</p><small>${formatDate(feedback.data_pedido)}</small></div>
+          <article class="review-item${feedback.foto ? "" : " review-item-no-photo"}">
+            ${feedback.foto ? `<img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />` : ""}
+            <div><strong>${escapeHTML(feedback.titulo)}</strong><span class="review-rating" aria-label="${Number(feedback.avaliacao)} de 5 estrelas">${"★".repeat(Number(feedback.avaliacao))}</span><p>${escapeHTML(feedback.comentario || "Sem comentário.")}</p><small>${formatDate(feedback.data_pedido)}</small></div>
           </article>`).join("")
       : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
   } catch {
@@ -566,6 +571,46 @@ function sendFeedback(id) {
   $("feedbackOrderId").value = id;
   $("feedbackFormStatus").textContent = "";
   $("feedbackDialog").showModal();
+}
+
+async function finalizeApprovedPayment(reference, attempt = 0) {
+  const checkout = JSON.parse(sessionStorage.getItem("pinturas_checkout_cart") || "null");
+  if (!checkout || checkout.clientId !== state.client?.Id_Cli) {
+    showFeedback("checkoutFeedback", "Entre na mesma conta da compra para atualizar o carrinho.");
+    return;
+  }
+
+  try {
+    const payment = await api(`/pagamentos/status/${encodeURIComponent(reference)}`);
+    if (["succeeded", "demo"].includes(payment.status_pagamento)) {
+      const purchasedItems = new Set(checkout.items.map((item) => String(item.id_quadro)));
+      state.cart = state.cart.filter((item) => !purchasedItems.has(String(item.id_quadro)));
+      persistCart();
+      sessionStorage.removeItem("pinturas_checkout_cart");
+      renderCart();
+      await loadOrders();
+      showFeedback(
+        "checkoutFeedback",
+        payment.status_pagamento === "demo"
+          ? "Pedido aprovado em modo de demonstração. Nenhum pagamento foi cobrado; os itens comprados saíram do carrinho."
+          : "Pagamento aprovado. Os itens comprados saíram do carrinho.",
+      );
+      return;
+    }
+
+    if (["failed", "expired"].includes(payment.status_pagamento)) {
+      sessionStorage.removeItem("pinturas_checkout_cart");
+      showFeedback("checkoutFeedback", "O pagamento não foi aprovado. Os itens continuam no carrinho.");
+      return;
+    }
+
+    showFeedback("checkoutFeedback", "Aguardando confirmação do pagamento. Os itens permanecem no carrinho.");
+    if (attempt < 60) {
+      setTimeout(() => finalizeApprovedPayment(reference, attempt + 1), 5000);
+    }
+  } catch (error) {
+    showFeedback("checkoutFeedback", error.message);
+  }
 }
 
 $("feedbackForm").addEventListener("submit", async (event) => {
@@ -874,6 +919,10 @@ $("trackingForm").addEventListener("submit", async (event) => {
   }
 });
 
+document.querySelectorAll("#screen-help .help-items p").forEach((paragraph) => {
+  paragraph.textContent = paragraph.textContent.replaceAll("Mercado Pago", "Stripe");
+});
+
 restoreCart();
 updateHeader();
 renderCart();
@@ -883,16 +932,10 @@ const [initialScreen, paymentReturn] = location.hash.replace("#", "").split("?")
 navigate(initialScreen || "home");
 if (paymentReturn) {
   const result = new URLSearchParams(paymentReturn).get("pagamento");
-  if (result === "sucesso") {
-    const checkout = JSON.parse(sessionStorage.getItem("pinturas_checkout_cart") || "null");
-    if (checkout?.clientId === state.client?.Id_Cli) {
-      state.cart = [];
-      persistCart();
-    }
-    sessionStorage.removeItem("pinturas_checkout_cart");
-    renderCart();
-    loadOrders();
-    showFeedback("checkoutFeedback", "Pagamento recebido. O pedido será atualizado após confirmação do Mercado Pago.");
+  if (result === "demo" || result === "sucesso") {
+    const reference = new URLSearchParams(paymentReturn).get("referencia");
+    if (reference) finalizeApprovedPayment(reference);
+    else showFeedback("checkoutFeedback", "Não foi possível consultar a confirmação do pagamento.");
   } else if (result === "pendente" || result === "falhou") {
     const checkout = JSON.parse(sessionStorage.getItem("pinturas_checkout_cart") || "null");
     if (checkout?.clientId === state.client?.Id_Cli && Array.isArray(checkout.items)) {
@@ -901,6 +944,6 @@ if (paymentReturn) {
       renderCart();
     }
     sessionStorage.removeItem("pinturas_checkout_cart");
-    showFeedback("checkoutFeedback", result === "pendente" ? "Pagamento pendente. Conclua ou confira as instruções do Mercado Pago." : "O pagamento não foi concluído. Você pode tentar novamente.");
+    showFeedback("checkoutFeedback", result === "pendente" ? "Pagamento pendente. Conclua ou confira as instruções do Stripe." : "O pagamento não foi concluído. Você pode tentar novamente.");
   }
 }

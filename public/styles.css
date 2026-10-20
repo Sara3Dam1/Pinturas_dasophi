@@ -1089,6 +1089,9 @@ input:focus {
   grid-template-columns: 84px minmax(0, 1fr);
   padding-bottom: 14px;
 }
+.review-item-no-photo {
+  grid-template-columns: minmax(0, 1fr);
+}
 .review-item img {
   aspect-ratio: 1;
   background: var(--cream);
