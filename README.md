@@ -11,6 +11,10 @@ npm start
 
 Acesse `http://localhost:3000`.
 
+## GitHub Codespaces
+
+Ao criar o Codespace, as dependências são instaladas automaticamente e a porta 3000 é encaminhada. Inicie o servidor no terminal com `npm start` e abra a porta **3000** na aba **Ports**. O Codespace mostrará a URL pública atual do site. Em um Codespace já existente, recrie o contêiner para aplicar essa configuração. Se o Codespace for removido ou a porta deixar de estar encaminhada, o endereço `*.app.github.dev` antigo não funcionará; use a URL exibida para o Codespace ativo.
+
 ## Pagamentos e envios
 
 O checkout usa Stripe Checkout para processar Pix ou cartão sem armazenar dados de cartão. A API Stripe não exige mensalidade, mas cobra tarifas por transação; consulte os valores atuais no painel Stripe. Para habilitar cobranças reais, crie uma conta Stripe, configure Pix se disponível para sua conta brasileira e informe a chave secreta, o segredo do webhook e a URL pública do site:
