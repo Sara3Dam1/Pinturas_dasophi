@@ -62,6 +62,20 @@ function clearLocalSession() {
   renderCart();
 }
 
+const readApiResponse = async (response) => {
+  const body = await response.text();
+  if (!body) return null;
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    if (response.ok) {
+      throw new Error(`O servidor retornou uma resposta inválida (HTTP ${response.status}).`);
+    }
+    return null;
+  }
+};
+
 const api = async (url, options = {}) => {
   const response = await fetch(`/api${url}`, {
     ...options,
@@ -71,9 +85,9 @@ const api = async (url, options = {}) => {
       ...(options.headers || {}),
     },
   });
-  const data = await response.json();
+  const data = await readApiResponse(response);
   if (response.status === 401 && state.token) clearLocalSession();
-  if (!response.ok) throw new Error(data.erro || "Ocorreu um erro.");
+  if (!response.ok) throw new Error(data?.erro || `Ocorreu um erro (HTTP ${response.status}).`);
   return data;
 };
 
@@ -84,9 +98,9 @@ const adminApi = async (url, options = {}) => {
     ...(options.headers || {}),
   };
   const response = await fetch(`/api${url}`, { ...options, headers });
-  const data = await response.json();
+  const data = await readApiResponse(response);
   if (response.status === 401 && state.adminToken) logoutAdmin();
-  if (!response.ok) throw new Error(data.erro || "Ocorreu um erro.");
+  if (!response.ok) throw new Error(data?.erro || `Ocorreu um erro (HTTP ${response.status}).`);
   return data;
 };
 
