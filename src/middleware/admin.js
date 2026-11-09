@@ -13,7 +13,6 @@ function requireAdmin(req, res, next) {
     try {
       payload = jwt.verify(authorization.slice(7), jwtSecret);
     } catch {
-      // An invalid admin session is rejected below.
     }
     if (payload?.role === "admin" && payload.email === adminEmail) {
       return next();
