@@ -143,6 +143,26 @@
   font-size: 18px;
   font-weight: 500;
 }
+.admin-order-actions {
+  align-items: end;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.order-review-button {
+  background: #dcefdc;
+  border: 0;
+  color: var(--ink);
+  font-size: 12px;
+  padding: 8px 11px;
+}
+.order-review-button:hover {
+  filter: brightness(0.97);
+}
+.order-review-button:focus-visible {
+  outline: 2px solid var(--blue-deep);
+  outline-offset: 3px;
+}
 .admin-order-card p,
 .admin-order-card small {
   color: var(--muted);
@@ -1381,6 +1401,35 @@ input:focus {
 }
 .workflow-dialog {
   max-width: 520px;
+}
+.admin-review-dialog h2 {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+.admin-review-customer,
+.admin-review-comment {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.admin-review-customer,
+.admin-review-order {
+  color: var(--muted);
+  font-size: 13px;
+}
+.admin-review-dialog .review-rating {
+  margin-top: 8px;
+}
+.admin-review-image-panel {
+  background: var(--cream);
+  margin: 18px 0;
+  text-align: center;
+}
+.admin-review-image-panel img {
+  display: block;
+  margin: 0 auto;
+  max-height: 50vh;
+  max-width: 100%;
+  object-fit: contain;
 }
 .artwork-dialog {
   align-items: center;

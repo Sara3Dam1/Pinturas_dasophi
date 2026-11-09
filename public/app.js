@@ -5,6 +5,7 @@ const state = {
   adminEmail: sessionStorage.getItem("pinturas_admin_email"),
   adminClientId: null,
   adminConversations: [],
+  adminFeedbacks: [],
   cart: [],
   register: false,
 };
@@ -524,9 +525,13 @@ async function loadOrders() {
 }
 
 function renderAdminOrders(target, orders, emptyText) {
+  const feedbackByOrder = new Map(
+    state.adminFeedbacks.map((feedback) => [Number(feedback.id_ped), feedback]),
+  );
   target.innerHTML = orders.length
     ? orders.map((order) => {
         const canShip = ["Pagamento aprovado", "Em producao"].includes(order.descricao_status);
+        const feedback = feedbackByOrder.get(Number(order.id_ped));
         const tracking = order.codigo_rastreamento
           ? `Correios: ${escapeHTML(order.codigo_rastreamento)} · previsão ${formatDate(order.previsao_entrega)}`
           : "Sem código de rastreio";
@@ -534,7 +539,10 @@ function renderAdminOrders(target, orders, emptyText) {
           <article class="admin-order-card">
             <div class="admin-order-heading">
               <strong>${escapeHTML(order.titulo)}</strong>
-              <span class="order-status">${escapeHTML(order.descricao_status)}</span>
+              <div class="admin-order-actions">
+                <span class="order-status">${escapeHTML(order.descricao_status)}</span>
+                ${feedback ? `<button class="order-review-button" type="button" data-admin-feedback="${Number(order.id_ped)}">Ver Avaliação</button>` : ""}
+              </div>
             </div>
             <p>${escapeHTML(order.cliente_nome)} · ${escapeHTML(order.cliente_email)}</p>
             <small>Pedido #${Number(order.id_ped)} · ${formatDate(order.data_pedido)} · ${formatCurrency(order.preco_u)}</small>
@@ -548,6 +556,10 @@ function renderAdminOrders(target, orders, emptyText) {
           </article>`;
       }).join("")
     : `<p class="empty-state">${emptyText}</p>`;
+
+  target.querySelectorAll("[data-admin-feedback]").forEach((button) => {
+    button.addEventListener("click", () => openAdminFeedback(button.dataset.adminFeedback));
+  });
 
   target.querySelectorAll("[data-admin-shipping]").forEach((form) => {
     form.addEventListener("submit", async (event) => {
@@ -579,20 +591,26 @@ async function loadAdminOrders() {
     $("adminActiveOrderCount").textContent = `${active.length} ${active.length === 1 ? "pedido" : "pedidos"}`;
     $("adminCompletedOrderCount").textContent = `${completed.length} ${completed.length === 1 ? "pedido" : "pedidos"}`;
     renderAdminOrders($("adminActiveOrders"), active, "Nenhum pedido em andamento.");
-    renderAdminOrders($("adminCompletedOrders"), completed, "Nenhum pedido concluído.");
-    await loadAdminFeedbacks();
+    try {
+      state.adminFeedbacks = await adminApi("/admin/feedbacks");
+      renderAdminOrders($("adminCompletedOrders"), completed, "Nenhum pedido concluído.");
+      renderAdminFeedbacks(state.adminFeedbacks);
+    } catch (error) {
+      state.adminFeedbacks = [];
+      renderAdminOrders($("adminCompletedOrders"), completed, "Nenhum pedido concluído.");
+      $("adminFeedbackCount").textContent = "Indisponível";
+      $("adminFeedbackList").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+    }
   } catch (error) {
     $("adminActiveOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
     $("adminCompletedOrders").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
   }
 }
 
-async function loadAdminFeedbacks() {
-  try {
-    const feedbacks = await adminApi("/admin/feedbacks");
-    $("adminFeedbackCount").textContent = `${feedbacks.length} ${feedbacks.length === 1 ? "avaliação" : "avaliações"}`;
-    $("adminFeedbackList").innerHTML = feedbacks.length
-      ? feedbacks.map((feedback) => `
+function renderAdminFeedbacks(feedbacks) {
+  $("adminFeedbackCount").textContent = `${feedbacks.length} ${feedbacks.length === 1 ? "avaliação" : "avaliações"}`;
+  $("adminFeedbackList").innerHTML = feedbacks.length
+    ? feedbacks.map((feedback) => `
           <article class="admin-feedback-item">
             <div class="admin-feedback-media">${feedback.foto
               ? `<img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />`
@@ -606,10 +624,36 @@ async function loadAdminFeedbacks() {
               <small>Pedido #${Number(feedback.id_ped)} · ${formatDate(feedback.data_pedido)}</small>
             </div>
           </article>`).join("")
-      : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
-  } catch (error) {
-    $("adminFeedbackList").innerHTML = `<p class="feedback">${escapeHTML(error.message)}</p>`;
+    : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
+}
+
+function openAdminFeedback(orderId) {
+  if (!isAdmin()) return;
+  const feedback = state.adminFeedbacks.find(
+    (item) => Number(item.id_ped) === Number(orderId),
+  );
+  if (!feedback) return;
+
+  $("adminReviewTitle").textContent = feedback.titulo;
+  $("adminReviewCustomer").textContent = `${feedback.cliente_nome} · ${feedback.cliente_email}`;
+  $("adminReviewRating").textContent = "★".repeat(Number(feedback.avaliacao));
+  $("adminReviewRating").setAttribute(
+    "aria-label",
+    `${Number(feedback.avaliacao)} de 5 estrelas`,
+  );
+  $("adminReviewComment").textContent = feedback.comentario || "Sem comentário.";
+  $("adminReviewOrder").textContent = `Pedido #${Number(feedback.id_ped)} · ${formatDate(feedback.data_pedido)}`;
+  const image = $("adminReviewImage");
+  const imagePanel = $("adminReviewImagePanel");
+  imagePanel.classList.toggle("hidden", !feedback.foto);
+  if (feedback.foto) {
+    image.src = feedback.foto;
+    image.alt = `Foto enviada na avaliação do pedido #${Number(feedback.id_ped)}`;
+  } else {
+    image.removeAttribute("src");
+    image.alt = "";
   }
+  $("adminReviewDialog").showModal();
 }
 
 async function loadPublicFeedbacks() {
@@ -751,6 +795,7 @@ function logoutAdmin() {
   state.adminEmail = null;
   state.adminClientId = null;
   state.adminConversations = [];
+  state.adminFeedbacks = [];
   sessionStorage.removeItem("pinturas_admin_token");
   sessionStorage.removeItem("pinturas_admin_email");
   updateHeader();

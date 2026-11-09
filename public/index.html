@@ -186,6 +186,19 @@
       </form>
     </dialog>
 
+    <dialog id="adminReviewDialog" class="workflow-dialog admin-review-dialog" aria-labelledby="adminReviewTitle">
+      <button class="dialog-close" aria-label="Fechar avaliação">×</button>
+      <p class="eyebrow">Avaliação do pedido</p>
+      <h2 id="adminReviewTitle"></h2>
+      <p id="adminReviewCustomer" class="admin-review-customer"></p>
+      <span id="adminReviewRating" class="review-rating"></span>
+      <p id="adminReviewComment" class="admin-review-comment"></p>
+      <div id="adminReviewImagePanel" class="admin-review-image-panel hidden">
+        <img id="adminReviewImage" alt="" />
+      </div>
+      <small id="adminReviewOrder" class="admin-review-order"></small>
+    </dialog>
+
     <dialog id="authDialog"><button class="dialog-close" aria-label="Fechar">×</button><div id="authContent"><p class="eyebrow">Bem-vinda(o)</p><h2 id="authTitle">Entrar na sua conta</h2><form id="authForm" autocomplete="off"><label id="nameField" class="hidden">Nome<input id="name" type="text" autocomplete="off" /></label><label>E-mail<input id="email" type="email" autocomplete="off" required /></label><label>Senha<div class="password-field"><input id="password" type="password" minlength="6" autocomplete="new-password" required /><button type="button" id="togglePassword" title="Mostrar senha">◉</button></div></label><button class="button dark full" type="submit">Entrar <span>↗</span></button></form><button id="recoverLink" class="dialog-link">Esqueci minha senha</button><p id="authSwitch" class="switch-text">Ainda não tem conta? <button>Cadastre-se</button></p><p id="authFeedback" class="feedback"></p></div></dialog>
     <script src="/app.js"></script>
   </body>
