@@ -34,7 +34,9 @@ Para cadastrar uma obra pela API, faça login em `POST /api/auth/login` usando o
 
 Configure `ADMIN_EMAIL` e `ADMIN_PASSWORD_HASH` no ambiente do servidor. A senha deve ser armazenada como hash bcrypt, nunca no código ou no navegador. Para gerar o hash de uma senha, execute `node -e 'console.log(require("bcryptjs").hashSync(process.argv[1], 12))' 'sua-senha'` em um terminal seguro. Em desenvolvimento, o projeto carrega essas variáveis de um arquivo `.env` local, ignorado pelo Git. A administradora entra pelo mesmo botão **Entrar** dos clientes, usando esse e-mail e senha. A sessão administrativa mostra a gestão de quadros em **Quadros originais**, as mensagens recebidas em **Chat de encomendas** e os pedidos separados em andamento e concluídos em **Carrinho**. O token administrativo dura oito horas. Use HTTPS em produção.
 
-Na gestão de quadros, é possível cadastrar título, tamanho, preço e uma foto opcional, ou retirar uma obra da venda sem apagar o histórico de pedidos. As conversas incluem as mensagens recebidas pelo chat do cliente; as respostas da artista aparecem na mesma conversa.
+Na gestão de quadros, é possível cadastrar título, tamanho, preço e uma foto opcional, ou retirar uma obra da venda sem apagar o histórico de pedidos. Os quadros disponíveis na loja são consultados publicamente: qualquer visitante pode vê-los, sem entrar na conta. A lista é atualizada sem cache para que quadros recém-adicionados ou retirados não continuem aparecendo com dados antigos.
+
+No **Chat de encomendas**, cada cliente tem uma conversa própria. Selecione uma pessoa na lista para ler e responder somente àquela conversa; o cliente verá a resposta no próprio chat. As mensagens ficam salvas para consulta posterior. As obras publicadas na **Galeria** também são públicas e podem ser vistas por todos os visitantes, sem login.
 
 A tela **Galeria** exibe obras somente para visualização, separadas dos quadros à venda. Apenas o acesso administrativo pode publicar ou remover obras; cada publicação exige título e foto, e não possui preço nem opção de compra.
 
@@ -55,13 +57,13 @@ Depois de postar o pedido, registre o código real dos Correios com `PATCH /api/
 
 - `POST /api/auth/register`, `POST /api/auth/login` e `POST /api/auth/recuperar`
 - `GET/PATCH /api/perfil` e `POST /api/perfil/foto`
-- `GET /api/catalogo`
-- `GET /api/galeria` (visualização pública), `POST /api/galeria` e `DELETE /api/galeria/:id` (exigem autenticação administrativa)
+- `GET /api/catalogo` (lista pública e atualizada dos quadros disponíveis para todos os visitantes)
+- `GET /api/galeria` (visualização pública e atualizada), `POST /api/galeria` e `DELETE /api/galeria/:id` (exigem autenticação administrativa)
 - `GET /api/pedidos`, `GET /api/pedidos/rastrear/:codigo` e `GET /api/pedidos/feedbacks`
 - `PATCH /api/pedidos/:id/confirmar-entrega` e `POST /api/pedidos/:id/feedback` (multipart: `avaliacao`, `comentario`, `foto`); a avaliação requer entrega confirmada
 - A criação direta por `POST /api/pedidos` foi desativada em favor do checkout pago
 - `POST /api/pagamentos/checkout` e `POST /api/pagamentos/webhook`
-- `POST /api/admin/login`, `GET /api/admin/pedidos`, `GET /api/admin/conversas` e `GET/POST /api/admin/conversas/:id/mensagens` exigem login administrativo (exceto o login)
+- `POST /api/admin/login`, `GET /api/admin/pedidos`, `GET /api/admin/conversas` e `GET/POST /api/admin/conversas/:id/mensagens` exigem login administrativo (exceto o login). Cada conversa é identificada pelo ID do cliente; as mensagens enviadas pela administradora ficam visíveis somente na conversa daquele cliente
 - `PATCH /api/pedidos/:id/envio` e `POST /api/catalogo` exigem autenticação administrativa
 - `DELETE /api/catalogo/:id` retira um quadro da venda sem remover pedidos antigos e exige autenticação administrativa
 - `POST /api/pedidos/:id/feedback`
