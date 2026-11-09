@@ -9,6 +9,7 @@ const upload = require("../middleware/upload");
 const router = express.Router();
 
 router.get("/", (_req, res) => {
+  res.set("Cache-Control", "no-store");
   const obras = db.prepare(`
     SELECT id_obra, titulo, tamanho, descricao, foto, data_publicacao
     FROM Galeria
