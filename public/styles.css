@@ -725,6 +725,31 @@ h3 {
   font-size: 13px;
   text-align: right;
 }
+.order-action {
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 9px;
+  padding: 9px 12px;
+  transition: transform 0.2s, filter 0.2s;
+}
+.order-action:hover {
+  filter: brightness(0.97);
+  transform: translateY(-2px);
+}
+.order-action:focus-visible,
+.review-image-trigger:focus-visible {
+  outline: 2px solid var(--blue-deep);
+  outline-offset: 3px;
+}
+.order-action-blue {
+  background: #d9edf6;
+}
+.order-action-pink {
+  background: #f8e1e9;
+}
 .online {
   color: var(--muted);
   display: block;
@@ -1190,6 +1215,18 @@ input:focus {
   background: var(--cream);
   object-fit: cover;
   width: 84px;
+}
+.review-image-trigger {
+  background: transparent;
+  border: 0;
+  cursor: zoom-in;
+  display: block;
+  height: 84px;
+  padding: 0;
+  width: 84px;
+}
+.review-image-trigger img {
+  display: block;
 }
 .review-item strong,
 .review-item small {

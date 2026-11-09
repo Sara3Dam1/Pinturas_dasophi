@@ -485,9 +485,9 @@ function renderOrders(target, orders, emptyText) {
     ? orders.map((order) => {
         const delivered = order.descricao_status === "Entregue" && order.data_entrega_confirmada;
         const action = order.descricao_status === "Enviado"
-          ? `<button class="dialog-link" data-confirm-delivery="${Number(order.id_ped)}">Confirmar recebimento</button>`
+          ? `<button class="order-action order-action-blue" data-confirm-delivery="${Number(order.id_ped)}">Confirmar entrega</button>`
           : delivered && !order.avaliacao_feedback
-            ? `<button class="dialog-link" data-feedback="${Number(order.id_ped)}">Avaliar com foto</button>`
+            ? `<button class="order-action order-action-pink" data-feedback="${Number(order.id_ped)}">Avaliar</button>`
             : order.avaliacao_feedback
               ? "Avaliação publicada"
               : "";
@@ -618,10 +618,11 @@ async function loadPublicFeedbacks() {
     $("feedbackGallery").innerHTML = feedbacks.length
       ? feedbacks.map((feedback) => `
           <article class="review-item${feedback.foto ? "" : " review-item-no-photo"}">
-            ${feedback.foto ? `<img src="${escapeHTML(feedback.foto)}" alt="Foto do quadro ${escapeHTML(feedback.titulo)}" loading="lazy" />` : ""}
+            ${feedback.foto ? `<button class="review-image-trigger artwork-preview-trigger" type="button" data-preview-image="${escapeHTML(feedback.foto)}" data-preview-title="${escapeHTML(feedback.titulo)}" data-preview-description="Foto enviada com a avaliação de ${Number(feedback.avaliacao)} de 5 estrelas." aria-label="Ampliar foto da avaliação de ${escapeHTML(feedback.titulo)}"><img src="${escapeHTML(feedback.foto)}" alt="" loading="lazy" /></button>` : ""}
             <div><strong>${escapeHTML(feedback.titulo)}</strong><span class="review-rating" aria-label="${Number(feedback.avaliacao)} de 5 estrelas">${"★".repeat(Number(feedback.avaliacao))}</span><p>${escapeHTML(feedback.comentario || "Sem comentário.")}</p><small>${formatDate(feedback.data_pedido)}</small></div>
           </article>`).join("")
       : '<p class="empty-state">Nenhuma avaliação publicada ainda.</p>';
+    bindArtworkPreviewTriggers($("feedbackGallery"));
   } catch {
     $("feedbackGallery").innerHTML = '<p class="empty-state">Não foi possível carregar as avaliações.</p>';
   }
