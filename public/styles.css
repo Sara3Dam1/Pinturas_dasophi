@@ -1112,6 +1112,10 @@ input:focus {
   background: #f9efc4;
 }
 
+.quick-green {
+  background: #dcefdc;
+}
+
 .quick-icon {
   display: block;
   font-size: 26px;
